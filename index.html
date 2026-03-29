@@ -282,7 +282,11 @@ footer{text-align:center;padding:10px;font-size:10px;color:#94a3b8;position:rela
 /* ═══════════ DATA ═══════════ */
 let D = {};
 let charts = {};
-const MN = ["Out","Nov","Dez","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set"];
+// Ordem hidrologica (como vem na planilha): Out Nov Dez Jan Fev Mar Abr Mai Jun Jul Ago Set
+// Indices para reordenar para ano calendario (Jan-Dez): 3,4,5,6,7,8,9,10,11,0,1,2
+const MN_HIDRO = ["Out","Nov","Dez","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set"];
+const CAL_IDX  = [3,4,5,6,7,8,9,10,11,0,1,2]; // Jan...Dez em termos de índice hidrologico
+const reorderCal = arr => CAL_IDX.map(i => arr[i]).filter(Boolean);
 const MSZN = {Oct:"Pré-cheia",Nov:"Pré-cheia",Dec:"Cheia",Jan:"Cheia plena",Feb:"Cheia plena",Mar:"Cheia plena",Apr:"Vazante",May:"Seca",Jun:"Seca",Jul:"Seca",Aug:"Seca",Sep:"Pré-cheia"};
 const SIL="#e07b39",CHA="#2d9e5f",FEM="#d63384",MAL="#0ea5e9";
 const f2=v=>v!=null&&!isNaN(+v)?Number(v).toFixed(2):"–";
@@ -428,13 +432,13 @@ function handleFile(inp){
       };
       const r1=rows("T1_RGS_Order_Month"),r2=rows("T2_RGS_Species"),r3=rows("T3_RGS_Sex_Month"),
             r4=rows("T4_GonadStage_Freq"),r5=rows("T5_Environmental_Month"),r6=rows("T6_Statistical_Tests"),r7=rows("T7_Sample_Overview");
-      D.t1=r1?.map((r,i)=>({m:MN[i]??r[0],s:MSZN[r[1]]??r[1],sil:+r[3]||0,cha:+r[7]||0,all:+r[11]||0,silN:+r[2]||0,chaN:+r[6]||0})).slice(0,12)??[];
+      D.t1=reorderCal(r1?.map((r,i)=>({m:MN_HIDRO[i]??r[0],s:MSZN[r[1]]??r[1],sil:+r[3]||0,cha:+r[7]||0,all:+r[11]||0,silN:+r[2]||0,chaN:+r[6]||0})).slice(0,12)??[]);
       D.t2=r2?.map(r=>({sp:r[0],sn:(r[0]||"").split(" ").slice(0,2).map((w,i)=>i===0?w[0]+".":w).join(" "),ord:r[1],n:+r[2]||0,rgs:+r[4]||0,sd:+r[5]||0,medRGS:+r[6]||0,tl:+r[9]||0,tw:+r[11]||0,nF:+r[12]||0,nM:+r[13]||0})).filter(d=>typeof d.sp==="string"&&d.sp.length>3)??[];
-      D.t3c=r3?.filter(r=>r[0]==="Pseudoplatystoma corruscans").map((r,i)=>({m:MN[i]??r[1],fRGS:+r[4]||0,mRGS:+r[7]||0}))??[];
-      D.t3p=r3?.filter(r=>r[0]==="Piaractus mesopotamicus").map((r,i)=>({m:MN[i]??r[1],fRGS:+r[4]||0,mRGS:+r[7]||0}))??[];
-      D.t4s=r4?.filter(r=>r[0]==="Siluriformes").map((r,i)=>({m:MN[i]??r[1],n:+r[3]||0,REP:+r[4]||0,ESV:+r[5]||0,MAT:+r[6]||0,EMA:+r[7]||0}))??[];
-      D.t4c=r4?.filter(r=>r[0]==="Characiformes").map((r,i)=>({m:MN[i]??r[1],n:+r[3]||0,REP:+r[4]||0,ESV:+r[5]||0,MAT:+r[6]||0,EMA:+r[7]||0}))??[];
-      D.t5=r5?.map((r,i)=>({m:MN[i]??r[0],wt:+r[3]||0,temp:+r[6]||0,do_:+r[8]||0,ph:+r[9]||0,cond:+r[10]||0,sec:+r[11]||0})).slice(0,12)??[];
+      D.t3c=reorderCal(r3?.filter(r=>r[0]==="Pseudoplatystoma corruscans").map((r,i)=>({m:MN_HIDRO[i]??r[1],fRGS:+r[4]||0,mRGS:+r[7]||0}))??[]);
+      D.t3p=reorderCal(r3?.filter(r=>r[0]==="Piaractus mesopotamicus").map((r,i)=>({m:MN_HIDRO[i]??r[1],fRGS:+r[4]||0,mRGS:+r[7]||0}))??[]);
+      D.t4s=reorderCal(r4?.filter(r=>r[0]==="Siluriformes").map((r,i)=>({m:MN_HIDRO[i]??r[1],n:+r[3]||0,REP:+r[4]||0,ESV:+r[5]||0,MAT:+r[6]||0,EMA:+r[7]||0}))??[]);
+      D.t4c=reorderCal(r4?.filter(r=>r[0]==="Characiformes").map((r,i)=>({m:MN_HIDRO[i]??r[1],n:+r[3]||0,REP:+r[4]||0,ESV:+r[5]||0,MAT:+r[6]||0,EMA:+r[7]||0}))??[]);
+      D.t5=reorderCal(r5?.map((r,i)=>({m:MN_HIDRO[i]??r[0],wt:+r[3]||0,temp:+r[6]||0,do_:+r[8]||0,ph:+r[9]||0,cond:+r[10]||0,sec:+r[11]||0})).slice(0,12)??[]);
       D.t6=r6?.map(r=>({teste:r[0],variavel:r[1],grupo:r[2],stat:r[4],n:r[5],p:r[6],sig:!String(r[6]).includes("NS"),interp:r[7]})).filter(d=>d.teste)??[];
       D.t7=r7?.map(r=>({sp:r[0],ord:r[1],n:+r[2]||0,nF:+r[3]||0,nM:+r[4]||0,tl:+r[5]||0,tw:+r[9]||0,rgs:+r[10]||0,sd:+r[11]||0,guild:r[12]})).filter(d=>typeof d.sp==="string"&&d.sp!=="TOTAL"&&+d.n>0)??[];
       loadApp();
