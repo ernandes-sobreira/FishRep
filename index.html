@@ -664,7 +664,7 @@ footer{text-align:center;padding:10px;font-size:10px;color:#94a3b8;position:rela
 </main>
 
 <!-- ===== MODAL USUÁRIO ===== -->
-<div class="modal-overlay open" id="modal-usuario" style="z-index:1000">
+<div class="modal-overlay" id="modal-usuario" style="z-index:1000">
   <div class="modal" style="max-width:360px">
     <div style="text-align:center;margin-bottom:4px;font-size:32px">🐟</div>
     <div class="modal-title">Bem-vindo ao FishRep</div>
@@ -762,32 +762,44 @@ function openIDB(){
   });
 }
 function idbGetAll(store){
+  if(!idb) return Promise.resolve([]);
   return new Promise((res,rej)=>{
-    const tx = idb.transaction(store,"readonly");
-    const req = tx.objectStore(store).getAll();
-    req.onsuccess = () => res(req.result);
-    req.onerror   = () => rej();
+    try {
+      const tx = idb.transaction(store,"readonly");
+      const req = tx.objectStore(store).getAll();
+      req.onsuccess = () => res(req.result||[]);
+      req.onerror   = () => res([]);
+    } catch(e){ console.warn('idbGetAll falhou:',e); res([]); }
   });
 }
 function idbPut(store, record){
+  if(!idb) return Promise.resolve();
   return new Promise((res,rej)=>{
-    const tx = idb.transaction(store,"readwrite");
-    tx.objectStore(store).put(record);
-    tx.oncomplete = res; tx.onerror = rej;
+    try {
+      const tx = idb.transaction(store,"readwrite");
+      tx.objectStore(store).put(record);
+      tx.oncomplete = res; tx.onerror = e=>{ console.warn('idbPut error:',e); res(); };
+    } catch(e){ console.warn('idbPut falhou:',e); res(); }
   });
 }
 function idbDelete(store, key){
+  if(!idb) return Promise.resolve();
   return new Promise((res,rej)=>{
-    const tx = idb.transaction(store,"readwrite");
-    tx.objectStore(store).delete(key);
-    tx.oncomplete = res; tx.onerror = rej;
+    try {
+      const tx = idb.transaction(store,"readwrite");
+      tx.objectStore(store).delete(key);
+      tx.oncomplete = res; tx.onerror = e=>{ console.warn('idbDelete error:',e); res(); };
+    } catch(e){ console.warn('idbDelete falhou:',e); res(); }
   });
 }
 function idbClear(store){
+  if(!idb) return Promise.resolve();
   return new Promise((res,rej)=>{
-    const tx = idb.transaction(store,"readwrite");
-    tx.objectStore(store).clear();
-    tx.oncomplete = res; tx.onerror = rej;
+    try {
+      const tx = idb.transaction(store,"readwrite");
+      tx.objectStore(store).clear();
+      tx.oncomplete = res; tx.onerror = e=>{ console.warn('idbClear error:',e); res(); };
+    } catch(e){ console.warn('idbClear falhou:',e); res(); }
   });
 }
 
@@ -1018,6 +1030,7 @@ function handleFile(inp){
       const CAMPO_SHEETS = ["Planilha1","Dados_Geral","Dourado","Sema","FISIO PINTADO"];
       const campoSheets = CAMPO_SHEETS.filter(n => wb.SheetNames.includes(n));
       if(campoSheets.length > 0){
+        await pedirUsuarioSeNecessario(); // garante identificação antes de gravar
         let totalNovos=0, totalSob=0, totalPul=0;
         for(const sheetName of campoSheets){
           console.log("[FishRep] Importando aba:", sheetName);
@@ -1178,6 +1191,7 @@ function hideProgress(){
 async function addManualRecord(){
   const sp = document.getElementById('f-specie').value.trim();
   if(!sp){alert('Informe o nome da espécie.');return;}
+  await pedirUsuarioSeNecessario(); // garante identificação antes de gravar
   const itemId = +document.getElementById('f-item').value || (Math.max(0,...allRecords.map(r=>+r.item||0))+1);
   const ct=+document.getElementById('f-ct').value||0, pt=+document.getElementById('f-pt').value||0;
   const pe=+document.getElementById('f-pe').value||0, pg=+document.getElementById('f-pg').value||0;
@@ -1941,14 +1955,31 @@ function confirmarUsuario(){
   selecionarUsuario(nome);
 }
 
+// Resolve a Promise pendente quando usuário confirma
+let _resolveUsuario = null;
+
 function selecionarUsuario(nome){
   usuarioAtual = nome;
   localStorage.setItem('fishrep_usuario', nome);
   document.getElementById('modal-usuario').classList.remove('open');
-  // Atualizar indicador no header
   const el = document.getElementById('usuario-label');
   if(el) el.textContent = '👤 ' + nome;
   carregarPainelAtualizacoes();
+  // Resolver promise pendente se existir
+  if(_resolveUsuario){ _resolveUsuario(nome); _resolveUsuario=null; }
+}
+
+// Pede identificação se ainda não tem — retorna Promise com o nome
+function pedirUsuarioSeNecessario(){
+  if(usuarioAtual) return Promise.resolve(usuarioAtual);
+  return new Promise(res=>{
+    _resolveUsuario = res;
+    document.getElementById('modal-usuario').classList.add('open');
+    setTimeout(()=>{
+      const inp = document.getElementById('input-usuario-nome');
+      if(inp) inp.focus();
+    }, 200);
+  });
 }
 
 function registrarAtividade(tipo, detalhes){
@@ -2049,6 +2080,7 @@ window.dlCSVGonadas      = dlCSVGonadas;
 window.dlChartSVG        = dlChartSVG;
 window.selecionarUsuario = selecionarUsuario;
 window.confirmarUsuario  = confirmarUsuario;
+window.pedirUsuarioSeNecessario = pedirUsuarioSeNecessario;
 window.carregarPainelAtualizacoes = carregarPainelAtualizacoes;
 window.renderRecordes    = renderRecordes;
 window.renderIndices     = renderIndices;
