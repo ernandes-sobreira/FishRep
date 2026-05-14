@@ -186,6 +186,9 @@ footer{text-align:center;padding:10px;font-size:10px;color:#94a3b8;position:rela
 .modal-sub{font-size:11px;color:#64748b;margin-bottom:16px}
 .modal-close{float:right;background:none;border:none;cursor:pointer;font-size:18px;color:#94a3b8;margin-top:-4px}
 </style>
+<!-- Firebase compat (funciona em file:// e https://) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -620,17 +623,13 @@ footer{text-align:center;padding:10px;font-size:10px;color:#94a3b8;position:rela
   <span style="font-size:10px">Desenvolvido por <strong style="color:#0077b6">Ernandes Sobreira</strong>, <strong style="color:#0077b6">Janeide Caboclo</strong>, <strong style="color:#0077b6">Claumir Muniz</strong>, <strong style="color:#0077b6">Derick Campos</strong>, <strong style="color:#0077b6">Leandro Pressinoti</strong> e <strong style="color:#0077b6">Wilkinson Lázaro</strong> · LIPAN · UNEMAT Cáceres-MT</span>
 </footer>
 
-<script type="module">
+<script>
 
 /* ════════════════════════════════════════════════════
    FishRep · LIPAN · Firebase + Offline + Duplicatas
    ════════════════════════════════════════════════════ */
 
-/* ── Firebase config ── */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, writeBatch }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
+/* ── Firebase config (compat mode — funciona em file:// e https://) ── */
 const firebaseConfig = {
   apiKey: "AIzaSyCOQct7Deo14TmX7npndbfvIqinUTlXHB8",
   authDomain: "fishrep-lipan.firebaseapp.com",
@@ -639,9 +638,9 @@ const firebaseConfig = {
   messagingSenderId: "54709970844",
   appId: "1:54709970844:web:7d663ec6f1611e586f8a59"
 };
-const fbApp = initializeApp(firebaseConfig);
-const db    = getFirestore(fbApp);
-const COL   = "registros";
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db  = firebase.firestore();
+const COL = "registros";
 
 /* ── IndexedDB (cache offline) ── */
 let idb = null;
@@ -739,11 +738,27 @@ const f3=v=>v!=null&&!isNaN(+v)&&+v!==0?Number(v).toFixed(3):"–";
    INICIALIZAÇÃO
    ════════════════════════════════════════════════════ */
 async function initApp(){
-  await openIDB();
+  console.log("[FishRep] initApp iniciando...");
+  try { await openIDB(); console.log("[FishRep] IndexedDB OK"); }
+  catch(e){ console.warn("[FishRep] IndexedDB falhou (modo degradado):", e); }
   updateOnlineStatus();
   window.addEventListener('online',  ()=>{ isOnline=true;  updateOnlineStatus(); syncPending(); });
   window.addEventListener('offline', ()=>{ isOnline=false; updateOnlineStatus(); });
-  await carregarTodosOsDados();
+  try {
+    await carregarTodosOsDados();
+    console.log("[FishRep] Dados carregados:", allRecords.length, "registros");
+  } catch(e){
+    console.error("[FishRep] Erro ao carregar dados:", e);
+    setStatus("Erro ao conectar ao Firebase. Upload ainda disponível.", "warn");
+  }
+  // Garantir que a tela de boas-vindas está visível mesmo com Firebase vazio
+  if(allRecords.length === 0){
+    document.getElementById("welcome").style.display="block";
+    document.getElementById("tabs-bar").style.display="none";
+    document.getElementById("sections").style.display="none";
+    showLoadingOverlay(false);
+    console.log("[FishRep] Banco vazio — tela de upload exibida");
+  }
 }
 
 function updateOnlineStatus(){
@@ -766,22 +781,29 @@ async function carregarTodosOsDados(){
   showLoadingOverlay(true);
   try {
     if(isOnline){
-      const snap = await getDocs(collection(db, COL));
+      console.log("[FishRep] Buscando dados no Firebase...");
+      const snap = await db.collection(COL).get();
       allRecords = snap.docs.map(d => d.data());
-      // Atualizar cache local
-      await idbClear("registros");
-      for(const r of allRecords) await idbPut("registros", r);
+      console.log("[FishRep] Firebase retornou:", allRecords.length, "registros");
+      // Atualizar cache local (só se IndexedDB disponível)
+      if(idb){
+        try {
+          await idbClear("registros");
+          for(const r of allRecords) await idbPut("registros", r);
+        } catch(e){ console.warn("[FishRep] Cache local falhou (não crítico):", e); }
+      }
       setStatus(`${allRecords.length} registros carregados do Firebase`,'ok');
     } else {
-      allRecords = await idbGetAll("registros");
+      allRecords = idb ? await idbGetAll("registros") : [];
       setStatus(`Offline · ${allRecords.length} registros do cache local`,'warn');
     }
   } catch(e){
-    console.warn("Firebase falhou, usando cache:", e);
-    allRecords = await idbGetAll("registros");
-    setStatus(`Modo offline · ${allRecords.length} registros`,'warn');
+    console.warn("[FishRep] Firebase falhou:", e.message || e);
+    allRecords = (idb) ? await idbGetAll("registros").catch(()=>[]) : [];
+    setStatus(`Erro Firebase · ${allRecords.length} registros em cache`,'err');
   }
   showLoadingOverlay(false);
+  console.log("[FishRep] carregarTodosOsDados: total =", allRecords.length);
   if(allRecords.length > 0){
     D = buildDataFromRecords(allRecords);
     loadApp();
@@ -801,7 +823,7 @@ async function gravarRegistro(rec){
   const docId = String(rec.item);
   try {
     if(isOnline){
-      await setDoc(doc(db, COL, docId), rec);
+      await db.collection(COL).doc(docId).set(rec);
       await idbPut("registros", rec);
       await idbDelete("pending", rec.item);
     } else {
@@ -823,7 +845,7 @@ async function syncPending(){
   let ok = 0;
   for(const rec of pendentes){
     try {
-      await setDoc(doc(db, COL, String(rec.item)), rec);
+      await db.collection(COL).doc(String(rec.item)).set(rec);
       await idbDelete("pending", rec.item);
       ok++;
     } catch(e){ break; }
@@ -858,20 +880,37 @@ function handleDrop(e){ handleFile({files:e.dataTransfer.files}); }
 
 function handleFile(inp){
   const file = inp.files[0]; if(!file) return;
+  console.log("[FishRep] handleFile chamado:", file.name);
   document.getElementById("dz-icon").textContent="⏳";
-  document.getElementById("dz-title").textContent="Processando...";
+  document.getElementById("dz-title").textContent="Processando " + file.name + "...";
+  setStatus("Lendo arquivo: " + file.name, "info");
   const reader = new FileReader();
+  reader.onerror = () => {
+    alert("Erro ao ler o arquivo. Tente novamente.");
+    document.getElementById("dz-icon").textContent="📂";
+    document.getElementById("dz-title").textContent="Arraste sua planilha aqui";
+  };
   reader.onload = async e => {
+    console.log("[FishRep] FileReader carregou, processando...");
+    let wb;
+    try { wb = XLSX.read(e.target.result,{type:"array"}); }
+    catch(err){
+      console.error("[FishRep] Erro ao parsear xlsx:", err);
+      alert("Arquivo inválido ou corrompido. Use o modelo .xlsx do FishRep.");
+      document.getElementById("dz-icon").textContent="📂";
+      document.getElementById("dz-title").textContent="Arraste sua planilha aqui";
+      return;
+    }
+    console.log("[FishRep] Abas encontradas:", wb.SheetNames);
     try {
-      const wb = XLSX.read(e.target.result,{type:"array"});
       if(wb.SheetNames.includes("Planilha1")){
         await importarPlanilhaCampo(wb);
       } else {
         await importarModeloFishRep(wb);
       }
     } catch(err){
-      console.error(err);
-      alert("Erro ao ler arquivo. Verifique o formato.");
+      console.error("[FishRep] Erro na importação:", err);
+      alert("Erro durante importação: " + err.message);
       document.getElementById("dz-icon").textContent="📂";
       document.getElementById("dz-title").textContent="Arraste sua planilha aqui";
     }
@@ -938,9 +977,18 @@ async function importarPlanilhaCampo(wb){
   }
 
   hideProgress();
+  console.log(`[FishRep] Import concluído: +${novos} novos, ${sobrescritos} sobrescritos, ${pulados} pulados`);
   setStatus(`Import: +${novos} novos, ${sobrescritos} sobrescritos, ${pulados} pulados`,'ok');
+  if(allRecords.length === 0){
+    alert("Nenhum registro válido encontrado na planilha. Verifique o formato.");
+    document.getElementById("dz-icon").textContent="📂";
+    document.getElementById("dz-title").textContent="Arraste sua planilha aqui";
+    return;
+  }
   D = buildDataFromRecords(allRecords);
+  console.log("[FishRep] buildDataFromRecords concluído, chamando loadApp...");
   loadApp();
+  console.log("[FishRep] loadApp concluído");
 }
 
 async function importarModeloFishRep(wb){
@@ -968,6 +1016,7 @@ async function importarModeloFishRep(wb){
   D.t7=(r7||[]).map(r=>({sp:r[0],ord:r[1],fam:getFamily(r[0]),n:+r[2]||0,nF:+r[3]||0,nM:+r[4]||0,tl:+r[5]||0,tw:+r[9]||0,rgs:+r[10]||0,sd:+r[11]||0,guild:r[12]})).filter(d=>d.sp&&d.sp!=='TOTAL'&&+d.n>0);
   D.species=spList3;
   setStatus('Modelo T1-T7 carregado (somente visualização)','warn');
+  console.log("[FishRep] Modelo T1-T7 processado, chamando loadApp...");
   loadApp();
 }
 
@@ -1484,6 +1533,28 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 
 /* ===== Inicializar app ===== */
 initApp();
+
+/* ── Expor funções no escopo global (necessário quando script tem async top-level) ── */
+window.handleFile        = handleFile;
+window.handleDrop        = handleDrop;
+window.switchWelcomeTab  = switchWelcomeTab;
+window.addManualRecord   = addManualRecord;
+window.processManualData = processManualData;
+window.clearManualRecords= clearManualRecords;
+window.updateManualPreview = updateManualPreview;
+window.showModal         = showModal;
+window.closeModal        = closeModal;
+window.showTab           = showTab;
+window.resetApp          = resetApp;
+window.gerarModelo       = gerarModelo;
+window.exportarBackup    = exportarBackup;
+window.renderSexo        = renderSexo;
+window.renderGonadas     = renderGonadas;
+window.renderAmbiental   = renderAmbiental;
+window.dlCSV             = dlCSV;
+window.dlCSVSexo         = dlCSVSexo;
+window.dlCSVGonadas      = dlCSVGonadas;
+window.dlChartSVG        = dlChartSVG;
 </script>
 </body>
 </html>
