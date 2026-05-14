@@ -1430,6 +1430,7 @@ function loadApp(){
   selVal.innerHTML=['Siluriformes','Characiformes'].map(o=>`<option>${o}</option>`).join('');
   renderOverview();renderIGSMensal();renderEspecies();renderSexo();renderGonadas();renderAmbiental();renderEstat();
   showTab(0);
+  atualizarBotaoVerAnalises();
 }
 
 function resetApp(){
@@ -1440,10 +1441,35 @@ function resetApp(){
   document.getElementById("dz-title").textContent="Arraste sua planilha aqui";
   const fi = document.getElementById("fileinput");
   if(fi) fi.value = "";
-  // Recarregar painel de atualizações
   setTimeout(carregarPainelAtualizacoes, 300);
-  Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});
-  charts={};
+  // Mostrar botão "Ver análises" se já tem dados carregados
+  atualizarBotaoVerAnalises();
+  // NÃO limpa allRecords nem destrói gráficos —
+  // dados continuam em memória para reabrir instantaneamente
+}
+
+function atualizarBotaoVerAnalises(){
+  let btn = document.getElementById('btn-ver-analises');
+  if(allRecords.length > 0){
+    if(!btn){
+      btn = document.createElement('button');
+      btn.id = 'btn-ver-analises';
+      btn.className = 'btn btn-green';
+      btn.style.cssText = 'width:100%;padding:13px;font-size:14px;border-radius:12px;margin-bottom:12px;font-weight:800;letter-spacing:.02em';
+      btn.onclick = () => {
+        document.getElementById("welcome").style.display="none";
+        document.getElementById("tabs-bar").style.display="block";
+        document.getElementById("sections").style.display="block";
+      };
+      // Inserir antes do dropzone
+      const dz = document.getElementById('dropzone') || document.querySelector('.dropzone');
+      if(dz && dz.parentNode) dz.parentNode.insertBefore(btn, dz);
+    }
+    btn.textContent = `📊 Ver análises (${allRecords.length} registros carregados)`;
+    btn.style.display = 'block';
+  } else {
+    if(btn) btn.style.display = 'none';
+  }
 }
 
 /* ════════════════════════════════════════════════════
@@ -1983,7 +2009,6 @@ function pedirUsuarioSeNecessario(){
 }
 
 function registrarAtividade(tipo, detalhes){
-  // tipo: 'upload' | 'manual' | 'backup'
   const registro = {
     tipo, detalhes,
     usuario: usuarioAtual || 'Desconhecido',
@@ -1992,14 +2017,18 @@ function registrarAtividade(tipo, detalhes){
   };
   // Gravar no Firebase
   if(isOnline){
-    db.collection('atividades').add(registro).catch(e=>console.warn('Atividade não gravada:',e));
+    db.collection('atividades').add(registro)
+      .then(()=> carregarPainelAtualizacoes())
+      .catch(e=>console.warn('Atividade não gravada:',e));
   }
-  // Gravar localmente também
+  // Gravar localmente sempre
   try {
     const hist = JSON.parse(localStorage.getItem('fishrep_historico')||'[]');
     hist.unshift(registro);
     localStorage.setItem('fishrep_historico', JSON.stringify(hist.slice(0,50)));
   } catch(e){}
+  // Atualizar painel imediatamente com dados locais
+  carregarPainelAtualizacoes();
 }
 
 async function carregarPainelAtualizacoes(){
@@ -2007,38 +2036,39 @@ async function carregarPainelAtualizacoes(){
   const lista  = document.getElementById('atualizacoes-lista');
   if(!painel||!lista) return;
 
-  let atividades = [];
+  // Sempre mostrar localStorage primeiro (instantâneo)
+  let local = [];
+  try { local = JSON.parse(localStorage.getItem('fishrep_historico')||'[]'); } catch(e){}
 
-  // Tentar Firebase primeiro
+  function renderAtividades(arr){
+    if(!arr.length){ painel.style.display='none'; return; }
+    painel.style.display='block';
+    const ICONS = {upload:'📤', manual:'✏️', backup:'⬇️'};
+    lista.innerHTML = arr.slice(0,8).map(a=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f1f5f9">
+        <span style="font-size:18px">${ICONS[a.tipo]||'📝'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:700;color:#1e3a5f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.detalhes}</div>
+          <div style="font-size:10px;color:#94a3b8">${a.ts_display||a.timestamp?.slice(0,16)?.replace('T',' ')||'—'}</div>
+        </div>
+        <span style="font-size:10px;font-weight:700;color:#0077b6;white-space:nowrap;background:#eff6ff;padding:2px 6px;border-radius:5px">👤 ${a.usuario||'—'}</span>
+      </div>
+    `).join('');
+  }
+
+  // Renderizar local imediatamente
+  if(local.length) renderAtividades(local);
+
+  // Depois tentar Firebase e atualizar
   if(isOnline){
     try {
-      const snap = await db.collection('atividades').orderBy('timestamp','desc').limit(8).get();
-      atividades = snap.docs.map(d=>d.data());
-    } catch(e){
-      // fallback para localStorage
-      atividades = JSON.parse(localStorage.getItem('fishrep_historico')||'[]');
-    }
-  } else {
-    atividades = JSON.parse(localStorage.getItem('fishrep_historico')||'[]');
+      const snap = await db.collection('atividades').limit(20).get();
+      const remoto = snap.docs.map(d=>d.data())
+        .sort((a,b)=>(b.timestamp||'').localeCompare(a.timestamp||''))
+        .slice(0,8);
+      if(remoto.length) renderAtividades(remoto);
+    } catch(e){ console.warn('Atividades Firebase:', e.message); }
   }
-
-  if(!atividades.length){
-    painel.style.display='none';
-    return;
-  }
-
-  painel.style.display='block';
-  const ICONS = {upload:'📤', manual:'✏️', backup:'⬇️'};
-  lista.innerHTML = atividades.map(a=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f1f5f9">
-      <span style="font-size:16px">${ICONS[a.tipo]||'📝'}</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:700;color:#1e3a5f">${a.detalhes}</div>
-        <div style="font-size:10px;color:#94a3b8">${a.ts_display||a.timestamp?.slice(0,16)?.replace('T',' ')||'—'}</div>
-      </div>
-      <span style="font-size:10px;font-weight:600;color:#0077b6;white-space:nowrap">👤 ${a.usuario||'—'}</span>
-    </div>
-  `).join('');
 }
 
 /* ── Verificar se usuário já foi selecionado nesta sessão ── */
@@ -2082,6 +2112,7 @@ window.selecionarUsuario = selecionarUsuario;
 window.confirmarUsuario  = confirmarUsuario;
 window.pedirUsuarioSeNecessario = pedirUsuarioSeNecessario;
 window.carregarPainelAtualizacoes = carregarPainelAtualizacoes;
+window.atualizarBotaoVerAnalises = atualizarBotaoVerAnalises;
 window.renderRecordes    = renderRecordes;
 window.renderIndices     = renderIndices;
 window.renderPesoComp    = renderPesoComp;
