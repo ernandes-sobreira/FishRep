@@ -264,6 +264,9 @@ footer{text-align:center;padding:10px;font-size:10px;color:#94a3b8;position:rela
     <button class="tab-btn" onclick="showTab(4)">🔬 Estágios</button>
     <button class="tab-btn" onclick="showTab(5)">🌊 Ambiental</button>
     <button class="tab-btn" onclick="showTab(6)">📊 Estatística</button>
+    <button class="tab-btn" onclick="showTab(7)">🏆 Recordes</button>
+    <button class="tab-btn" onclick="showTab(8)">📐 Índices</button>
+    <button class="tab-btn" onclick="showTab(9)">🔗 IGS × Espécie</button>
     <button class="tab-reset" onclick="resetApp()">↩ Nova planilha</button>
   </div>
 </div>
@@ -574,6 +577,84 @@ footer{text-align:center;padding:10px;font-size:10px;color:#94a3b8;position:rela
           <button class="btn btn-green btn-sm" onclick="dlCSV('t6','testes')">⬇ CSV</button>
         </div>
         <div class="scroll"><table id="tbl-estat"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+
+    <!-- ===== SECTION 7: RECORDES ===== -->
+    <div id="section-7" style="display:none">
+      <div class="card">
+        <div class="card-hdr">
+          <div>
+            <div class="card-title">🏆 Dashboard de Recordes</div>
+            <div class="card-sub">Maiores e menores indivíduos registrados no banco de dados</div>
+          </div>
+        </div>
+        <div id="recordes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;padding:4px 0 8px"></div>
+      </div>
+    </div>
+
+    <!-- ===== SECTION 8: ÍNDICES ===== -->
+    <div id="section-8" style="display:none">
+      <!-- Fator de Condição K -->
+      <div class="card">
+        <div class="card-hdr">
+          <div>
+            <div class="card-title">⚖️ Fator de Condição (K)</div>
+            <div class="card-sub">K = (Peso Total / CT³) × 100 · Indica bem-estar e condição nutricional</div>
+          </div>
+          <button class="btn btn-green btn-sm" onclick="dlCSV('tK','fator_condicao')">⬇ CSV</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+          <div style="height:300px"><canvas id="chart-k-mensal"></canvas></div>
+          <div style="height:300px"><canvas id="chart-k-especies"></canvas></div>
+        </div>
+        <div class="scroll"><table id="tbl-k"><thead></thead><tbody></tbody></table></div>
+      </div>
+
+      <!-- Relação Peso-Comprimento -->
+      <div class="card" style="margin-top:14px">
+        <div class="card-hdr">
+          <div>
+            <div class="card-title">📏 Relação Peso-Comprimento</div>
+            <div class="card-sub">PT = a × CT^b · b≈3 = crescimento isométrico · b&lt;3 = alométrico negativo · b&gt;3 = alométrico positivo</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="sel-pc-sp" onchange="renderPesoComp()" style="font-size:11px;padding:4px 8px;border-radius:7px;border:1px solid #bfdbfe"></select>
+            <button class="btn btn-green btn-sm" onclick="dlCSVPC()">⬇ CSV</button>
+          </div>
+        </div>
+        <div style="height:320px"><canvas id="chart-pc"></canvas></div>
+        <div id="pc-stats" style="margin-top:10px;background:#f0f9ff;border-radius:8px;padding:10px 14px;font-size:12px;color:#1e3a5f"></div>
+      </div>
+
+      <!-- IHS e IGS mensal -->
+      <div class="card" style="margin-top:14px">
+        <div class="card-hdr">
+          <div>
+            <div class="card-title">🫀 IHS e IGS Mensais</div>
+            <div class="card-sub">Índice Hepatossomático (IHS) e Índice Gonadossomático (IGS/RGS) por mês · Todos os espécimes</div>
+          </div>
+        </div>
+        <div style="height:280px"><canvas id="chart-ihs-igs"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ===== SECTION 9: IGS POR ESPÉCIE ===== -->
+    <div id="section-9" style="display:none">
+      <div class="card">
+        <div class="card-hdr">
+          <div>
+            <div class="card-title">🔗 IGS/RGS Mensal por Espécie</div>
+            <div class="card-sub">Ciclo reprodutivo individual de cada espécie ao longo dos meses</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="sel-igs-sp" onchange="renderIGSEspecie()" style="font-size:11px;padding:4px 8px;border-radius:7px;border:1px solid #bfdbfe"></select>
+            <button class="btn btn-green btn-sm" onclick="dlCSVIGSEsp()">⬇ CSV</button>
+          </div>
+        </div>
+        <div style="height:300px"><canvas id="chart-igs-sp"></canvas></div>
+        <div class="scroll" style="margin-top:12px"><table id="tbl-igs-sp"><thead></thead><tbody></tbody></table></div>
       </div>
     </div>
 
@@ -1273,6 +1354,12 @@ function loadApp(){
   const spList=D.species||(D.t7||[]).map(r=>r.sp);
   const selSexo=document.getElementById('sel-sexo');
   selSexo.innerHTML=spList.filter(sp=>D.t3bySpecies&&D.t3bySpecies[sp]).map(sp=>`<option value="${sp}">${sp}</option>`).join('');
+  // Inicializar select IGS por espécie (section-9)
+  const selIgsSp=document.getElementById('sel-igs-sp');
+  if(selIgsSp){ selIgsSp.innerHTML=spList.map(sp=>`<option value="${sp}">${sp}</option>`).join(''); }
+  // Inicializar select Peso-Comprimento (section-8)
+  const selPcSp=document.getElementById('sel-pc-sp');
+  if(selPcSp){ selPcSp.innerHTML=''; spList.forEach(sp=>{const o=document.createElement('option');o.value=sp;o.textContent=sp;selPcSp.appendChild(o);}); }
   const selTipo=document.getElementById('sel-gonadas-tipo');
   const selVal=document.getElementById('sel-gonadas-valor');
   selTipo.onchange=function(){
@@ -1307,10 +1394,16 @@ function switchWelcomeTab(tab){
   else { document.querySelectorAll('.welcome-tab')[1].classList.add('active'); document.getElementById('wp-manual').classList.add('active'); }
 }
 function showTab(i){
-  for(let k=0;k<7;k++){
-    document.getElementById("section-"+k).style.display=k===i?"block":"none";
+  const total = document.querySelectorAll(".tab-btn").length;
+  for(let k=0;k<total;k++){
+    const sec=document.getElementById("section-"+k);
+    if(sec) sec.style.display=k===i?"block":"none";
     document.querySelectorAll(".tab-btn")[k].classList.toggle("active",k===i);
   }
+  // Renderizar seções sob demanda
+  if(i===7) renderRecordes();
+  if(i===8) renderIndices();
+  if(i===9) renderIGSEspecie();
 }
 
 /* ════════════════════════════════════════════════════
@@ -1534,6 +1627,256 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 /* ===== Inicializar app ===== */
 initApp();
 
+
+/* ════════════════════════════════════════════════════
+   SECTION 7 — RECORDES
+   ════════════════════════════════════════════════════ */
+function renderRecordes(){
+  if(!allRecords.length) return;
+  const valid = allRecords.filter(r=>r.ct>0 && r.pt>0);
+
+  // ── Recordes absolutos (indivíduo)
+  const sortBy = (arr,fn,asc=false) => [...arr].filter(r=>fn(r)>0).sort((a,b)=>asc?fn(a)-fn(b):fn(b)-fn(a));
+  const recordCards = [
+    {icon:'📏',label:'Maior CT',unit:'cm',  fn:r=>r.ct,   fmt:v=>v.toFixed(1)},
+    {icon:'📏',label:'Menor CT',unit:'cm',  fn:r=>r.ct,   fmt:v=>v.toFixed(1), asc:true},
+    {icon:'⚖️',label:'Mais pesado',unit:'g',fn:r=>r.pt,   fmt:v=>v.toLocaleString('pt-BR')},
+    {icon:'⚖️',label:'Mais leve',unit:'g',  fn:r=>r.pt,   fmt:v=>v.toLocaleString('pt-BR'), asc:true},
+    {icon:'🫀',label:'Fígado maior',unit:'g',fn:r=>r.pf,  fmt:v=>v.toFixed(1)},
+    {icon:'🧬',label:'Gônada maior',unit:'g',fn:r=>r.pg,  fmt:v=>v.toFixed(1)},
+    {icon:'📈',label:'IGS/RGS maior',unit:'%',fn:r=>r.rgs,fmt:v=>v.toFixed(3)},
+    {icon:'🫀',label:'IHS maior',unit:'%',  fn:r=>r.ihs,  fmt:v=>v.toFixed(3)},
+  ];
+
+  const grid = document.getElementById('recordes-grid');
+  grid.innerHTML = recordCards.map(c=>{
+    const sorted = sortBy(valid, c.fn, c.asc||false);
+    if(!sorted.length) return '';
+    const rec = sorted[0];
+    const val = c.fmt(c.fn(rec));
+    const color = c.asc ? '#e07b39' : '#0077b6';
+    return `<div style="background:#fff;border:1.5px solid #bfdbfe;border-radius:12px;padding:14px 16px">
+      <div style="font-size:22px;margin-bottom:4px">${c.icon}</div>
+      <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em">${c.label}</div>
+      <div style="font-size:24px;font-weight:900;color:${color};margin:4px 0">${val} <span style="font-size:12px;font-weight:400;color:#94a3b8">${c.unit}</span></div>
+      <div style="font-size:11px;font-style:italic;color:#1e3a5f;font-weight:700">${rec.specie}</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px">Item ${rec.item} · ${rec.monthLabel||'—'} · ${rec.sexo||'—'}</div>
+    </div>`;
+  }).join('');
+
+}
+
+/* ════════════════════════════════════════════════════
+   SECTION 8 — ÍNDICES (K + P-C + IHS/IGS mensal)
+   ════════════════════════════════════════════════════ */
+function renderIndices(){
+  if(!allRecords.length) return;
+  const valid = allRecords.filter(r=>r.ct>0 && r.pt>0);
+
+  // ── Calcular K por registro
+  valid.forEach(r=>{ r.k = r.ct>0 ? (r.pt / Math.pow(r.ct,3)) * 100 : 0; });
+  D.tK = valid.filter(r=>r.k>0);
+
+  // ── Gráfico K mensal
+  const mean = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+  const kMensal = MN_LABEL.map(m=>{
+    const sub = valid.filter(r=>r.monthLabel===m && r.k>0);
+    return {m, k:mean(sub.map(r=>r.k)), n:sub.length};
+  });
+  mkChart('chart-k-mensal',{
+    type:'line',
+    data:{
+      labels:kMensal.map(r=>r.m),
+      datasets:[{label:'K médio',data:kMensal.map(r=>r.k||null),
+        borderColor:'#8b5cf6',backgroundColor:'#8b5cf622',fill:true,
+        tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},title:{display:true,text:'Fator de Condição K — Mensal',color:'#1e3a5f',font:{size:12,weight:'bold'}}},
+      scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'K',color:'#64748b',font:{size:11}}}}}
+  });
+
+  // ── Gráfico K por espécie (barras)
+  const kSp = (D.t7||[]).map(e=>{
+    const sub = valid.filter(r=>r.specie===e.sp && r.k>0);
+    return {sp:e.sp,sn:e.sp.split(' ').slice(0,2).map((w,i)=>i===0?w[0]+'.':w).join(' '),k:mean(sub.map(r=>r.k)),ord:e.ord};
+  }).filter(e=>e.k>0).sort((a,b)=>b.k-a.k);
+  const h2 = Math.max(200, kSp.length*30);
+  document.getElementById('chart-k-especies').closest('div').style.height = h2+'px';
+  mkChart('chart-k-especies',{
+    type:'bar',
+    data:{
+      labels:kSp.map(e=>e.sn),
+      datasets:[{label:'K médio',data:kSp.map(e=>e.k),
+        backgroundColor:kSp.map(e=>e.ord==='Siluriformes'?SIL+'cc':CHA+'cc'),
+        borderColor:kSp.map(e=>e.ord==='Siluriformes'?SIL:CHA),
+        borderWidth:1.5,borderRadius:4}]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},title:{display:true,text:'K por Espécie',color:'#1e3a5f',font:{size:12,weight:'bold'}}},
+      scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:{color:'#f1f5f9'},ticks:{...tickOpts,font:{size:10,style:'italic',family:'Trebuchet MS'}}}}}
+  });
+
+  // ── Tabela K
+  const tbl = document.getElementById('tbl-k');
+  tbl.querySelector('thead').innerHTML=`<tr>${['Espécie','Ord','n','K médio','K mín','K máx','CT médio','PT médio'].map(h=>`<th>${h}</th>`).join('')}</tr>`;
+  const min=arr=>arr.length?Math.min(...arr):0, max=arr=>arr.length?Math.max(...arr):0;
+  tbl.querySelector('tbody').innerHTML=kSp.map(e=>{
+    const sub=valid.filter(r=>r.specie===e.sp&&r.k>0);
+    const ks=sub.map(r=>r.k);
+    return `<tr>
+      <td style="font-style:italic;font-weight:700;color:#1e3a5f">${e.sp}</td>
+      <td><span class="badge ${e.ord==='Siluriformes'?'badge-sil':'badge-cha'}">${e.ord==='Siluriformes'?'Silu.':'Char.'}</span></td>
+      <td>${sub.length}</td>
+      <td style="font-weight:700;color:#8b5cf6">${mean(ks).toFixed(4)}</td>
+      <td>${min(ks).toFixed(4)}</td><td>${max(ks).toFixed(4)}</td>
+      <td>${mean(sub.map(r=>r.ct)).toFixed(1)}</td>
+      <td>${Math.round(mean(sub.map(r=>r.pt))).toLocaleString('pt-BR')}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Relação Peso-Comprimento: popular o select
+  const spList = [...new Set(valid.map(r=>r.specie))].sort();
+  const sel = document.getElementById('sel-pc-sp');
+  if(sel.options.length===0) spList.forEach(sp=>{const o=document.createElement('option');o.value=sp;o.textContent=sp;sel.appendChild(o);});
+  renderPesoComp();
+
+  // ── IHS e IGS mensal combinados
+  const ihsMensal = MN_LABEL.map(m=>{
+    const sub=valid.filter(r=>r.monthLabel===m);
+    return {m,ihs:mean(sub.map(r=>r.ihs).filter(v=>v>0)),igs:mean(sub.map(r=>r.rgs).filter(v=>v>0))};
+  });
+  mkChart('chart-ihs-igs',{
+    type:'line',
+    data:{
+      labels:ihsMensal.map(r=>r.m),
+      datasets:[
+        {label:'IGS/RGS',data:ihsMensal.map(r=>r.igs||null),borderColor:'#0077b6',backgroundColor:'#0077b622',fill:false,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false},
+        {label:'IHS',data:ihsMensal.map(r=>r.ihs||null),borderColor:'#7c3aed',backgroundColor:'#7c3aed22',fill:false,tension:.4,pointRadius:4,borderWidth:2.5,borderDash:[5,3],spanGaps:false},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:legendOpts},
+      scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'Índice (%)',color:'#64748b',font:{size:11}}}}}
+  });
+}
+
+function renderPesoComp(){
+  const sp = document.getElementById('sel-pc-sp').value;
+  if(!sp) return;
+  const pts = allRecords.filter(r=>r.specie===sp && r.ct>0 && r.pt>0);
+  if(pts.length < 3){
+    document.getElementById('pc-stats').textContent='Dados insuficientes para regressão (mínimo 3 pontos).';
+    return;
+  }
+  // Regressão linear em log-log: ln(PT) = ln(a) + b*ln(CT)
+  const lnX = pts.map(r=>Math.log(r.ct)), lnY = pts.map(r=>Math.log(r.pt));
+  const n=lnX.length, sx=lnX.reduce((a,b)=>a+b,0), sy=lnY.reduce((a,b)=>a+b,0);
+  const sxx=lnX.reduce((a,v)=>a+v*v,0), sxy=lnX.reduce((a,v,i)=>a+v*lnY[i],0);
+  const b = (n*sxy - sx*sy) / (n*sxx - sx*sx);
+  const lna = (sy - b*sx) / n;
+  const a = Math.exp(lna);
+  // R²
+  const yMean = sy/n;
+  const ssTot = lnY.reduce((acc,v)=>acc+(v-yMean)**2,0);
+  const ssRes = lnY.reduce((acc,v,i)=>acc+(v-(lna+b*lnX[i]))**2,0);
+  const r2 = 1 - ssRes/ssTot;
+  // Linha de regressão
+  const ctMin=Math.min(...pts.map(r=>r.ct)), ctMax=Math.max(...pts.map(r=>r.ct));
+  const ctRange=[ctMin,...Array.from({length:20},(_,i)=>ctMin+(ctMax-ctMin)*i/19),ctMax];
+  const regLine = ctRange.map(ct=>({x:ct,y:a*Math.pow(ct,b)}));
+
+  mkChart('chart-pc',{
+    type:'scatter',
+    data:{
+      datasets:[
+        {label:'Dados',data:pts.map(r=>({x:r.ct,y:r.pt})),
+          backgroundColor:pts.map(r=>r.sexo==='F'?FEM+'aa':r.sexo==='M'?MAL+'aa':'#94a3b8aa'),
+          pointRadius:4,pointHoverRadius:6},
+        {label:`PT = ${a.toFixed(4)} × CT^${b.toFixed(4)}`,
+          type:'line',data:regLine,
+          borderColor:'#374151',backgroundColor:'transparent',
+          borderWidth:2,pointRadius:0,tension:0}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:legendOpts,tooltip:{callbacks:{label:p=>p.datasetIndex===0?`CT:${p.raw.x}cm  PT:${p.raw.y}g  ${pts[p.dataIndex]?.sexo||''}`:``}}},
+      scales:{
+        x:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'CT (cm)',color:'#64748b',font:{size:11}}},
+        y:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'PT (g)',color:'#64748b',font:{size:11}}}
+      }}
+  });
+
+  const tipo = b>3.05?'Alométrico positivo (b>3)':b<2.95?'Alométrico negativo (b<3)':'Isométrico (b≈3)';
+  document.getElementById('pc-stats').innerHTML=
+    `<strong style="color:#1e3a5f">${sp}</strong> &nbsp;·&nbsp; n=${pts.length} &nbsp;·&nbsp;
+     PT = <strong>${a.toFixed(5)}</strong> × CT<sup><strong>${b.toFixed(4)}</strong></sup> &nbsp;·&nbsp;
+     R² = <strong style="color:${r2>.85?'#2d9e5f':r2>.6?'#e07b39':'#e03c3c'}">${r2.toFixed(4)}</strong> &nbsp;·&nbsp;
+     <strong style="color:#8b5cf6">${tipo}</strong>`;
+
+  D.tPC_current = pts.map(r=>({specie:r.specie,item:r.item,ct:r.ct,pt:r.pt,sexo:r.sexo,monthLabel:r.monthLabel,b_fitted:+(a*Math.pow(r.ct,b)).toFixed(2)}));
+}
+
+function dlCSVPC(){
+  const data = D.tPC_current;
+  if(!data?.length) return;
+  const keys=Object.keys(data[0]);
+  const csv=[keys.join(','),...data.map(r=>keys.map(k=>JSON.stringify(r[k]??'')).join(','))].join('\n');
+  const a2=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:'peso_comprimento.csv'});
+  document.body.appendChild(a2);a2.click();document.body.removeChild(a2);
+}
+
+/* ════════════════════════════════════════════════════
+   SECTION 9 — IGS POR ESPÉCIE
+   ════════════════════════════════════════════════════ */
+function renderIGSEspecie(){
+  const sp = document.getElementById('sel-igs-sp').value;
+  if(!sp || !allRecords.length) return;
+  const mean = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+  const data = MN_LABEL.map(m=>{
+    const sub = allRecords.filter(r=>r.specie===sp && r.monthLabel===m);
+    const f=sub.filter(r=>r.sexo==='F'), ma=sub.filter(r=>r.sexo==='M');
+    return {m,all:mean(sub.map(r=>r.rgs)),fRGS:mean(f.map(r=>r.rgs)),mRGS:mean(ma.map(r=>r.rgs)),
+      ihs:mean(sub.map(r=>r.ihs).filter(v=>v>0)),n:sub.length,nF:f.length,nM:ma.length};
+  });
+  mkChart('chart-igs-sp',{
+    type:'line',
+    data:{
+      labels:data.map(r=>r.m),
+      datasets:[
+        {label:'IGS Geral',data:data.map(r=>r.all||null),borderColor:'#0077b6',backgroundColor:'#0077b622',fill:false,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false},
+        {label:'IGS ♀',data:data.map(r=>r.fRGS||null),borderColor:FEM,backgroundColor:FEM+'22',fill:false,tension:.4,pointRadius:3,borderWidth:2,borderDash:[4,2],spanGaps:false},
+        {label:'IGS ♂',data:data.map(r=>r.mRGS||null),borderColor:MAL,backgroundColor:MAL+'22',fill:false,tension:.4,pointRadius:3,borderWidth:2,borderDash:[2,3],spanGaps:false},
+        {label:'IHS',data:data.map(r=>r.ihs||null),borderColor:'#7c3aed',backgroundColor:'#7c3aed22',fill:false,tension:.4,pointRadius:4,borderWidth:2,borderDash:[6,3],spanGaps:false},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:legendOpts},
+      scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'Índice (%)',color:'#64748b',font:{size:11}}}}}
+  });
+  const tbl=document.getElementById('tbl-igs-sp');
+  tbl.querySelector('thead').innerHTML=`<tr>${['Mês','Estação','n total','n ♀','n ♂','IGS Geral','IGS ♀','IGS ♂','IHS'].map(h=>`<th>${h}</th>`).join('')}</tr>`;
+  tbl.querySelector('tbody').innerHTML=data.map(r=>`<tr>
+    <td style="font-weight:700">${r.m}</td>
+    <td>${MONTH_SEASON_MAP[r.m]||'—'}</td>
+    <td>${r.n}</td><td>${r.nF}</td><td>${r.nM}</td>
+    <td style="font-weight:700;color:#0077b6">${r.all>0?r.all.toFixed(3):'–'}</td>
+    <td style="color:${FEM};font-weight:700">${r.fRGS>0?r.fRGS.toFixed(3):'–'}</td>
+    <td style="color:${MAL};font-weight:700">${r.mRGS>0?r.mRGS.toFixed(3):'–'}</td>
+    <td style="color:#7c3aed;font-weight:700">${r.ihs>0?r.ihs.toFixed(3):'–'}</td>
+  </tr>`).join('');
+  D.tIGSSp_current = data.map(r=>({...r,specie:sp}));
+}
+
+function dlCSVIGSEsp(){
+  const data=D.tIGSSp_current;
+  if(!data?.length) return;
+  const keys=Object.keys(data[0]);
+  const csv=[keys.join(','),...data.map(r=>keys.map(k=>JSON.stringify(r[k]??'')).join(','))].join('\n');
+  const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:'igs_'+data[0].specie.replace(/ /g,'_')+'.csv'});
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+
 /* ── Expor funções no escopo global (necessário quando script tem async top-level) ── */
 window.handleFile        = handleFile;
 window.handleDrop        = handleDrop;
@@ -1555,6 +1898,12 @@ window.dlCSV             = dlCSV;
 window.dlCSVSexo         = dlCSVSexo;
 window.dlCSVGonadas      = dlCSVGonadas;
 window.dlChartSVG        = dlChartSVG;
+window.renderRecordes    = renderRecordes;
+window.renderIndices     = renderIndices;
+window.renderPesoComp    = renderPesoComp;
+window.renderIGSEspecie  = renderIGSEspecie;
+window.dlCSVPC           = dlCSVPC;
+window.dlCSVIGSEsp       = dlCSVIGSEsp;
 </script>
 </body>
 </html>
