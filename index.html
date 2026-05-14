@@ -791,8 +791,15 @@ const MN_LABEL  = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","
 const CAL_IDX   = [3,4,5,6,7,8,9,10,11,0,1,2];
 const reorderCal = arr => CAL_IDX.map(i => arr[i]).filter(Boolean);
 const MONTH_CODE_MAP = {
+  /* formato padrão com ponto */
   "A.-Jan":"Jan","B.-Fev":"Fev","C.-Mar":"Mar","D.-Abr":"Abr","E.-Mai":"Mai","F.-Jun":"Jun",
-  "G.-Jul":"Jul","H.-Ago":"Ago","I.-Set":"Set","J.-Out":"Out","K.-Nov":"Nov","L.-Dez":"Dez"
+  "G.-Jul":"Jul","H.-Ago":"Ago","I.-Set":"Set","J.-Out":"Out","K.-Nov":"Nov","L.-Dez":"Dez",
+  /* formato sem ponto (planilhas antigas) */
+  "A-Jan":"Jan","B-Fev":"Fev","B-Feb":"Fev","C-Mar":"Mar","D-Abr":"Abr","D-Apr":"Abr",
+  "E-Mai":"Mai","F-Jun":"Jun","G-Jul":"Jul","H-Ago":"Ago","I-Set":"Set","I-Sep":"Set",
+  "J-Out":"Out","J-Oct":"Out","K-Nov":"Nov","L-Dez":"Dez","L-Dec":"Dez",
+  /* variantes com espaço trailing */
+  "L-Dec ":"Dez","L.-Dez ":"Dez","A.-Jan ":"Jan"
 };
 const MONTH_SEASON_MAP = {
   Jan:"Cheia",Fev:"Cheia",Mar:"Cheia",Abr:"Vazante",
@@ -984,8 +991,28 @@ function handleFile(inp){
     }
     console.log("[FishRep] Abas encontradas:", wb.SheetNames);
     try {
-      if(wb.SheetNames.includes("Planilha1")){
-        await importarPlanilhaCampo(wb);
+      const CAMPO_SHEETS = ["Planilha1","Dados_Geral","Dourado","Sema","FISIO PINTADO"];
+      const campoSheets = CAMPO_SHEETS.filter(n => wb.SheetNames.includes(n));
+      if(campoSheets.length > 0){
+        let totalNovos=0, totalSob=0, totalPul=0;
+        for(const sheetName of campoSheets){
+          console.log("[FishRep] Importando aba:", sheetName);
+          setStatus("Importando aba: " + sheetName + "...", "info");
+          const res = await importarPlanilhaCampo(wb, sheetName);
+          if(res){ totalNovos+=res.novos; totalSob+=res.sobrescritos; totalPul+=res.pulados; }
+          if(res?.cancelado) break;
+        }
+        hideProgress();
+        if(allRecords.length === 0){
+          alert("Nenhum registro válido encontrado. Verifique o formato da planilha.");
+          document.getElementById("dz-icon").textContent="📂";
+          document.getElementById("dz-title").textContent="Arraste sua planilha aqui";
+        } else {
+          setStatus(`✅ Total: +${totalNovos} novos, ${totalSob} sobrescritos, ${totalPul} pulados — ${allRecords.length} registros no banco`,'ok');
+          D = buildDataFromRecords(allRecords);
+          console.log("[FishRep] buildDataFromRecords OK, chamando loadApp");
+          loadApp();
+        }
       } else {
         await importarModeloFishRep(wb);
       }
@@ -999,8 +1026,8 @@ function handleFile(inp){
   reader.readAsArrayBuffer(file);
 }
 
-async function importarPlanilhaCampo(wb){
-  const ws   = wb.Sheets["Planilha1"];
+async function importarPlanilhaCampo(wb, sheetName){
+  const ws   = wb.Sheets[sheetName || "Planilha1"];
   const data = XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
   const hdr  = data[0];
   const ci   = name => hdr.findIndex(h=>h===name);
@@ -1022,7 +1049,11 @@ async function importarPlanilhaCampo(wb){
   for(let i=0; i<linhas.length; i++){
     if(cancelado) break;
     const r = linhas[i];
-    const itemId = r[iItem] != null ? +r[iItem] : (i+1);
+    // Aceitar IDs alfanuméricos (ex: 857a) — manter como string se não for número puro
+    const rawItem = r[iItem];
+    const itemId = rawItem != null
+      ? (isNaN(Number(rawItem)) ? String(rawItem).trim() : Number(rawItem))
+      : (i + 1);
     showProgress(i+1, linhas.length);
 
     if(isDuplicata(itemId)){
@@ -1060,16 +1091,7 @@ async function importarPlanilhaCampo(wb){
   hideProgress();
   console.log(`[FishRep] Import concluído: +${novos} novos, ${sobrescritos} sobrescritos, ${pulados} pulados`);
   setStatus(`Import: +${novos} novos, ${sobrescritos} sobrescritos, ${pulados} pulados`,'ok');
-  if(allRecords.length === 0){
-    alert("Nenhum registro válido encontrado na planilha. Verifique o formato.");
-    document.getElementById("dz-icon").textContent="📂";
-    document.getElementById("dz-title").textContent="Arraste sua planilha aqui";
-    return;
-  }
-  D = buildDataFromRecords(allRecords);
-  console.log("[FishRep] buildDataFromRecords concluído, chamando loadApp...");
-  loadApp();
-  console.log("[FishRep] loadApp concluído");
+  return {novos, sobrescritos, pulados, cancelado};
 }
 
 async function importarModeloFishRep(wb){
@@ -1356,7 +1378,11 @@ function loadApp(){
   selSexo.innerHTML=spList.filter(sp=>D.t3bySpecies&&D.t3bySpecies[sp]).map(sp=>`<option value="${sp}">${sp}</option>`).join('');
   // Inicializar select IGS por espécie (section-9)
   const selIgsSp=document.getElementById('sel-igs-sp');
-  if(selIgsSp){ selIgsSp.innerHTML=spList.map(sp=>`<option value="${sp}">${sp}</option>`).join(''); }
+  if(selIgsSp){ 
+    selIgsSp.innerHTML=spList.map(sp=>`<option value="${sp}">${sp}</option>`).join(''); 
+    // Renderizar seção 9 se já estiver aberta
+    if(document.getElementById('section-9').style.display!=='none') renderIGSEspecie();
+  }
   // Inicializar select Peso-Comprimento (section-8)
   const selPcSp=document.getElementById('sel-pc-sp');
   if(selPcSp){ selPcSp.innerHTML=''; spList.forEach(sp=>{const o=document.createElement('option');o.value=sp;o.textContent=sp;selPcSp.appendChild(o);}); }
@@ -1378,6 +1404,9 @@ function resetApp(){
   document.getElementById("sections").style.display="none";
   document.getElementById("dz-icon").textContent="📂";
   document.getElementById("dz-title").textContent="Arraste sua planilha aqui";
+  // Resetar fileinput para permitir novo upload do mesmo arquivo
+  const fi = document.getElementById("fileinput");
+  if(fi) fi.value = "";
   Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});
   charts={};
 }
@@ -1738,7 +1767,9 @@ function renderIndices(){
   // ── Relação Peso-Comprimento: popular o select
   const spList = [...new Set(valid.map(r=>r.specie))].sort();
   const sel = document.getElementById('sel-pc-sp');
-  if(sel.options.length===0) spList.forEach(sp=>{const o=document.createElement('option');o.value=sp;o.textContent=sp;sel.appendChild(o);});
+  // Repopular sempre (espécies podem ter mudado com novos uploads)
+  sel.innerHTML=''; 
+  spList.forEach(sp=>{const o=document.createElement('option');o.value=sp;o.textContent=sp;sel.appendChild(o);});
   renderPesoComp();
 
   // ── IHS e IGS mensal combinados
