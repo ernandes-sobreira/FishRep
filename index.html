@@ -133,6 +133,50 @@ footer{text-align:center;padding:14px 20px;font-size:11px;color:#94a3b8;position
 .ativ-ts{font-size:10px;color:#94a3b8}
 .ativ-user{font-size:10px;font-weight:700;color:#0077b6;white-space:nowrap;background:#eff6ff;padding:2px 7px;border-radius:5px}
 @keyframes loadingBar{0%{transform:translateX(-100%)}50%{transform:translateX(0)}100%{transform:translateX(100%)}}
+
+/* ════ MOBILE RESPONSIVO ════ */
+@media (max-width: 768px){
+  header{padding:8px 10px;}
+  .hdr-inner{flex-direction:column;gap:6px;align-items:flex-start;}
+  .hdr-btns{flex-wrap:wrap;gap:5px;width:100%;}
+  .hdr-btns .btn{font-size:10px;padding:5px 8px;}
+  .logo-txt{font-size:18px;}
+  .logo-sub{font-size:8px;}
+  .logo img{height:34px!important;}
+  .tabs-inner{overflow-x:auto;-webkit-overflow-scrolling:touch;gap:4px;padding:0 8px;}
+  .tab-btn{font-size:11px;padding:9px 10px;white-space:nowrap;}
+  .welcome{padding:12px 10px;}
+  .welcome-title h1{font-size:22px;}
+  .card{padding:12px 10px;}
+  .card-hdr{flex-direction:column;gap:8px;align-items:flex-start;}
+  .card-title{font-size:14px;}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{font-size:10px;}
+  th,td{padding:4px 5px;white-space:nowrap;}
+  canvas{max-height:240px!important;}
+  /* Formulário manual em coluna única no mobile */
+  #wp-manual .card > div[style*="grid-template-columns:1fr 1fr"]{
+    display:grid!important;grid-template-columns:1fr!important;
+  }
+  /* Recordes em coluna única */
+  #recordes-grid{grid-template-columns:1fr!important;}
+  /* Índices: gráficos empilhados */
+  #section-8 div[style*="grid-template-columns:1fr 1fr"]{
+    grid-template-columns:1fr!important;
+  }
+  .welcome-tabs{flex-wrap:wrap;}
+  .welcome-tab{font-size:12px;padding:7px 12px;}
+  #painel-atualizacoes{font-size:11px;}
+  .ativ-user{display:none;}
+  .modal{margin:10px;padding:16px;}
+  .btn{font-size:12px;}
+}
+@media (max-width: 480px){
+  .hdr-btns span#usuario-label{display:none;}
+  .logo-sub{display:none;}
+  canvas{max-height:200px!important;}
+  .tab-btn{font-size:10px;padding:8px 8px;}
+}
 </style>
 </head>
 <body>
@@ -839,7 +883,24 @@ function abrirAnalises(){
   document.getElementById("tabs-bar").style.display="block";
   document.getElementById("sections").style.display="block";
   showTab(0);
-  renderOverview();
+  // Renderizar todas as abas sequencialmente com yield para não travar
+  renderTudo();
+}
+async function renderTudo(){
+  try{ renderOverview(); }catch(e){ console.error('renderOverview:',e); }
+  await new Promise(r=>setTimeout(r,0));
+  try{ renderIGSMensal(); }catch(e){ console.error('renderIGSMensal:',e); }
+  await new Promise(r=>setTimeout(r,0));
+  try{ renderEspecies(); }catch(e){ console.error('renderEspecies:',e); }
+  await new Promise(r=>setTimeout(r,0));
+  try{ renderSexo(); }catch(e){ console.error('renderSexo:',e); }
+  await new Promise(r=>setTimeout(r,0));
+  try{ renderGonadas(); }catch(e){ console.error('renderGonadas:',e); }
+  await new Promise(r=>setTimeout(r,0));
+  try{ renderAmbiental(); }catch(e){ console.error('renderAmbiental:',e); }
+  await new Promise(r=>setTimeout(r,0));
+  try{ renderEstat(); }catch(e){ console.error('renderEstat:',e); }
+  console.log('[FishRep] Todas as abas renderizadas');
 }
 
 /* ════ Sincronizar pendentes ════ */
@@ -1082,9 +1143,21 @@ function showTab(i){
     if(sec)sec.style.display=k===i?"block":"none";
     document.querySelectorAll(".tab-btn")[k].classList.toggle("active",k===i);
   }
-  if(i===7)renderRecordes();
-  if(i===8)renderIndices();
-  if(i===9)renderIGSEspecie();
+  // Re-renderizar ao trocar aba (charts precisam do container visível)
+  setTimeout(()=>{
+    try{
+      if(i===0)renderOverview();
+      if(i===1)renderIGSMensal();
+      if(i===2)renderEspecies();
+      if(i===3)renderSexo();
+      if(i===4)renderGonadas();
+      if(i===5)renderAmbiental();
+      if(i===6)renderEstat();
+      if(i===7)renderRecordes();
+      if(i===8)renderIndices();
+      if(i===9)renderIGSEspecie();
+    }catch(e){console.warn('render tab '+i+':',e);}
+  },50);
 }
 
 function prepararSelects(){
@@ -1339,7 +1412,7 @@ window.renderPesoComp=renderPesoComp; window.renderIGSEspecie=renderIGSEspecie;
 window.dlCSV=dlCSV; window.dlCSVSexo=dlCSVSexo; window.dlCSVGonadas=dlCSVGonadas;
 window.dlCSVPC=dlCSVPC; window.dlCSVIGSEsp=dlCSVIGSEsp; window.dlChartSVG=dlChartSVG;
 window.selecionarUsuario=selecionarUsuario; window.confirmarUsuario=confirmarUsuario;
-window.abrirAnalises=abrirAnalises; window.carregarPainelAtualizacoes=carregarPainelAtualizacoes;
+window.abrirAnalises=abrirAnalises; window.renderTudo=renderTudo; window.carregarPainelAtualizacoes=carregarPainelAtualizacoes;
 
 /* Fechar modais clicando fora */
 document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});});
