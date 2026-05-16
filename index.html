@@ -1236,7 +1236,18 @@ function buildDataFromRecords(records){
   const calcStageFreq=(recs,gv)=>MN_LABEL.map(m=>{const sub=recs.filter(r=>r.monthLabel===m);const n=sub.length;if(!n)return{m,n:0,REP:0,ESV:0,MAT:0,EMA:0,group:gv};const cnt={REP:0,ESV:0,MAT:0,EMA:0};sub.forEach(r=>{cnt[stageNorm(r.stage)]=(cnt[stageNorm(r.stage)]||0)+1;});return{m,n,group:gv,REP:+(cnt.REP/n*100).toFixed(1),ESV:+(cnt.ESV/n*100).toFixed(1),MAT:+(cnt.MAT/n*100).toFixed(1),EMA:+(cnt.EMA/n*100).toFixed(1)};});
   d.t4ByOrdem={};['Siluriformes','Characiformes'].forEach(o=>{d.t4ByOrdem[o]=calcStageFreq(valid.filter(r=>r.ordem===o),o);});
   d.t4BySpecies={};spList.forEach(sp=>{d.t4BySpecies[sp]=calcStageFreq(valid.filter(r=>r.specie===sp),sp);});
-  d.t5=MN_LABEL.map(m=>{const sub=valid.filter(r=>r.monthLabel===m);const mn2=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;return{m,wt:mn2(sub.map(r=>r.wt).filter(Boolean)),temp:mn2(sub.map(r=>r.temp).filter(Boolean)),do_:mn2(sub.map(r=>r.od).filter(Boolean)),cond:mn2(sub.map(r=>r.cond).filter(Boolean)),ph:mn2(sub.map(r=>r.ph).filter(Boolean)),sec:mn2(sub.map(r=>r.sec).filter(Boolean))};});
+  d.t5=MN_LABEL.map(m=>{
+  const sub=valid.filter(r=>r.monthLabel===m);
+  const mn2=arr=>{const v=arr.filter(x=>x!=null&&x!==''&&!isNaN(x)&&+x>0);return v.length?v.reduce((a,b)=>a+ +b,0)/v.length:0;};
+  return{m,
+    wt:mn2(sub.map(r=>r.wt)),
+    temp:mn2(sub.map(r=>r.temp)),
+    do_:mn2(sub.map(r=>r.od)),
+    cond:mn2(sub.map(r=>r.cond)),
+    ph:mn2(sub.map(r=>r.ph)),
+    sec:mn2(sub.map(r=>r.sec))
+  };
+});
   d.t6=[];['Siluriformes','Characiformes'].forEach(o=>{const sub=valid.filter(r=>r.ordem===o);if(sub.length<2)return;d.t6.push({teste:'Kruskal-Wallis',variavel:'RGS por mês',grupo:o,stat:`n=${sub.length}`,n:'k=12',p:'use R',sig:true,interp:'Exporte CSV e calcule no R'});});
   spList.forEach(sp=>{const f=valid.filter(r=>r.specie===sp&&r.sexo==='F');const m=valid.filter(r=>r.specie===sp&&r.sexo==='M');if(f.length<2||m.length<2)return;d.t6.push({teste:'Mann-Whitney U',variavel:'RGS ♀ vs ♂',grupo:sp,stat:`♀:${mean(f.map(r=>r.rgs)).toFixed(3)} ♂:${mean(m.map(r=>r.rgs)).toFixed(3)}`,n:`nF=${f.length};nM=${m.length}`,p:'use R',sig:mean(f.map(r=>r.rgs))!==mean(m.map(r=>r.rgs)),interp:'Exporte CSV e calcule no R'});});
   d.species=spList;
@@ -1319,9 +1330,26 @@ function renderGonadas(){
 function renderAmbiental(){
   const varKey=document.getElementById('sel-ambiental').value;
   const data=D.t5||[];
+  console.log('[FishRep] renderAmbiental key='+varKey+' data='+JSON.stringify(data.slice(0,3)));
   const labels={'wt':'Nível Rio (m)','temp':'Temperatura (°C)','do_':'OD (mg/L)','ph':'pH','cond':'Condutividade (µS/cm)','sec':'Secchi (cm)'};
   const colors={'wt':'#0077b6','temp':'#e03c3c','do_':'#2d9e5f','ph':'#7c3aed','cond':'#e07b39','sec':'#0891b2'};
-  mkChart('chart-ambiental',{type:'line',data:{labels:data.map(r=>r.m),datasets:[{label:labels[varKey]||varKey,data:data.map(r=>r[varKey]||null),borderColor:colors[varKey]||'#0077b6',backgroundColor:(colors[varKey]||'#0077b6')+'22',fill:true,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts}}}});
+  const vals=data.map(r=>r[varKey]||null);
+  const hasData=vals.some(v=>v&&v>0);
+  if(!hasData){
+    // Mostrar aviso em vez de gráfico vazio
+    if(charts['chart-ambiental']){try{charts['chart-ambiental'].destroy();delete charts['chart-ambiental'];}catch(e){}}
+    const canvas=document.getElementById('chart-ambiental');
+    if(canvas){
+      const ctx=canvas.getContext('2d');
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='#94a3b8';ctx.font='14px Trebuchet MS';ctx.textAlign='center';
+      ctx.fillText('Sem dados de '+labels[varKey]+' neste banco.',canvas.width/2,canvas.height/2-10);
+      ctx.font='11px Trebuchet MS';
+      ctx.fillText('Preencha a coluna correspondente na planilha e reimporte.',canvas.width/2,canvas.height/2+15);
+    }
+    return;
+  }
+  mkChart('chart-ambiental',{type:'line',data:{labels:data.map(r=>r.m),datasets:[{label:labels[varKey]||varKey,data:vals,borderColor:colors[varKey]||'#0077b6',backgroundColor:(colors[varKey]||'#0077b6')+'22',fill:true,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts}}}});
 }
 
 function renderEstat(){
@@ -1355,9 +1383,13 @@ function renderRecordes(){
 function renderIndices(){
   if(!allRecords.length)return;
   const valid=allRecords.filter(r=>r.ct>0&&r.pt>0);
-  valid.forEach(r=>{r.k=r.ct>0?(r.pt/Math.pow(r.ct,3))*100:0;});
-  D.tK=valid.filter(r=>r.k>0);
-  const kMensal=MN_LABEL.map(m=>{const sub=valid.filter(r=>r.monthLabel===m&&r.k>0);return{m,k:mean(sub.map(r=>r.k)),n:sub.length};});
+  valid.forEach(r=>{r.k=(r.ct>5&&r.pt>0)?(r.pt/Math.pow(r.ct,3))*100:0;});
+  const allK=valid.filter(r=>r.k>0).map(r=>r.k).sort((a,b)=>a-b);
+  const medK=allK.length?allK[Math.floor(allK.length/2)]:1;
+  const maxK=medK*5; // remover outliers extremos (>5x mediana)
+  D.tK=valid.filter(r=>r.k>0&&r.k<maxK);
+  console.log('[FishRep] K: n='+D.tK.length+' mediana='+medK.toFixed(3)+' maxK='+maxK.toFixed(3));
+  const kMensal=MN_LABEL.map(m=>{const sub=D.tK.filter(r=>r.monthLabel===m);return{m,k:mean(sub.map(r=>r.k)),n:sub.length};});
   mkChart('chart-k-mensal',{type:'line',data:{labels:kMensal.map(r=>r.m),datasets:[{label:'K médio',data:kMensal.map(r=>r.k||null),borderColor:'#8b5cf6',backgroundColor:'#8b5cf622',fill:true,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'Fator K — Mensal',color:'#1e3a5f',font:{size:12,weight:'bold'}}},scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'K',color:'#64748b',font:{size:11}}}}}});
   const kSp=(D.t7||[]).map(e=>{const sub=valid.filter(r=>r.specie===e.sp&&r.k>0);return{sp:e.sp,sn:e.sp.split(' ').slice(0,2).map((w,i)=>i===0?w[0]+'.':w).join(' '),k:mean(sub.map(r=>r.k)),ord:e.ord,n:sub.length};}).filter(e=>e.k>0).sort((a,b)=>b.k-a.k);
   const h2=Math.max(200,kSp.length*30);
@@ -1367,15 +1399,26 @@ function renderIndices(){
   const tbl=document.getElementById('tbl-k');
   tbl.querySelector('thead').innerHTML=`<tr>${['Espécie','Ord','n','K médio','K mín','K máx','CT médio','PT médio'].map(h=>`<th>${h}</th>`).join('')}</tr>`;
   tbl.querySelector('tbody').innerHTML=kSp.map(e=>{const sub=valid.filter(r=>r.specie===e.sp&&r.k>0);const ks=sub.map(r=>r.k);return`<tr><td style="font-style:italic;font-weight:700;color:#1e3a5f">${e.sp}</td><td><span class="badge ${e.ord==='Siluriformes'?'badge-sil':'badge-cha'}">${e.ord==='Siluriformes'?'Sil.':'Cha.'}</span></td><td>${sub.length}</td><td style="font-weight:700;color:#8b5cf6">${mean(ks).toFixed(4)}</td><td>${min(ks).toFixed(4)}</td><td>${max(ks).toFixed(4)}</td><td>${mean(sub.map(r=>r.ct)).toFixed(1)}</td><td>${Math.round(mean(sub.map(r=>r.pt))).toLocaleString('pt-BR')}</td></tr>`;}).join('');
-  const spList=[...new Set(valid.map(r=>r.specie))].sort();
-  const sel=document.getElementById('sel-pc-sp');sel.innerHTML='';spList.forEach(sp=>{const o=document.createElement('option');o.value=sp;o.textContent=sp;sel.appendChild(o);});
-  renderPesoComp();
+  const spList=[...new Set(valid.filter(r=>r.ct>0&&r.pt>0).map(r=>r.specie))].sort();
+  const sel=document.getElementById('sel-pc-sp');
+  if(sel){
+    sel.innerHTML='';
+    spList.forEach(sp=>{const o=document.createElement('option');o.value=sp;o.textContent=sp;sel.appendChild(o);});
+    console.log('[FishRep] sel-pc-sp populado com',spList.length,'espécies');
+  }
+  setTimeout(renderPesoComp, 50);
   const ihsMensal=MN_LABEL.map(m=>{const sub=valid.filter(r=>r.monthLabel===m);return{m,ihs:mean(sub.map(r=>r.ihs).filter(v=>v>0)),igs:mean(sub.map(r=>r.rgs).filter(v=>v>0))};});
   mkChart('chart-ihs-igs',{type:'line',data:{labels:ihsMensal.map(r=>r.m),datasets:[{label:'IGS/RGS',data:ihsMensal.map(r=>r.igs||null),borderColor:'#0077b6',backgroundColor:'#0077b622',fill:false,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false},{label:'IHS',data:ihsMensal.map(r=>r.ihs||null),borderColor:'#7c3aed',backgroundColor:'#7c3aed22',fill:false,tension:.4,pointRadius:4,borderWidth:2.5,borderDash:[5,3],spanGaps:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts},scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'Índice (%)',color:'#64748b',font:{size:11}}}}}});
 }
 
 function renderPesoComp(){
-  const sp=document.getElementById('sel-pc-sp').value;if(!sp)return;
+  const selEl=document.getElementById('sel-pc-sp');
+  if(!selEl||!selEl.options.length){
+    // Popular o select se ainda não foi feito
+    const spList=[...new Set(allRecords.filter(r=>r.specie&&r.ct>0&&r.pt>0).map(r=>r.specie))].sort();
+    selEl.innerHTML='';spList.forEach(sp=>{const o=document.createElement('option');o.value=sp;o.textContent=sp;selEl.appendChild(o);});
+  }
+  const sp=selEl?selEl.value:'';if(!sp)return;
   const pts=allRecords.filter(r=>r.specie===sp&&r.ct>0&&r.pt>0);
   if(pts.length<3){document.getElementById('pc-stats').textContent='Dados insuficientes (mínimo 3 pontos).';return;}
   const lnX=pts.map(r=>Math.log(r.ct)),lnY=pts.map(r=>Math.log(r.pt));
