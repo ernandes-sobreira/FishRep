@@ -230,6 +230,7 @@ footer{text-align:center;padding:14px 20px;font-size:11px;color:#94a3b8;position
       <button class="btn btn-teal" onclick="exportarBackup()">⬇️ Backup</button>
       <button class="btn btn-green" onclick="document.getElementById('fileinput').click()">📂 Carregar</button>
       <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.3)" onclick="resetApp()">🏠 Início</button>
+      <button class="btn" style="background:rgba(220,38,38,.7);color:#fff;border:1.5px solid rgba(255,255,255,.2);font-size:10px" onclick="limparBanco()" title="Apagar todos os registros do Firebase">🗑 Limpar banco</button>
       <input id="fileinput" type="file" accept=".xlsx" style="display:none" onchange="handleFile(this)"/>
     </div>
   </div>
@@ -1029,7 +1030,10 @@ async function importarPlanilhaCampo(wb,sheetName){
     if(cancelado)break;
     const r=linhas[i];
     const rawItem=r[iItem];
-    const itemId=rawItem!=null?(isNaN(Number(rawItem))?String(rawItem).trim():Number(rawItem)):(i+1);
+    const itemNum=rawItem!=null?(isNaN(Number(rawItem))?String(rawItem).trim():Number(rawItem)):(i+1);
+    // Usar coluna ID (LIPAN-XXX) como chave única se existir, senão usar Item
+    const iID=hdr.findIndex(h=>h==='ID');
+    const itemId=iID>=0&&r[iID]?String(r[iID]).trim():String(itemNum);
     showProgress(i+1,linhas.length);
     if(!bulkMode&&isDuplicata(itemId)){
       const acao=await resolverDuplicata(itemId,r[iSpecie]);
@@ -1391,14 +1395,18 @@ function renderIndices(){
   console.log('[FishRep] K: n='+D.tK.length+' mediana='+medK.toFixed(3)+' maxK='+maxK.toFixed(3));
   const kMensal=MN_LABEL.map(m=>{const sub=D.tK.filter(r=>r.monthLabel===m);return{m,k:mean(sub.map(r=>r.k)),n:sub.length};});
   mkChart('chart-k-mensal',{type:'line',data:{labels:kMensal.map(r=>r.m),datasets:[{label:'K médio',data:kMensal.map(r=>r.k||null),borderColor:'#8b5cf6',backgroundColor:'#8b5cf622',fill:true,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'Fator K — Mensal',color:'#1e3a5f',font:{size:12,weight:'bold'}}},scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'K',color:'#64748b',font:{size:11}}}}}});
-  const kSp=(D.t7||[]).map(e=>{const sub=valid.filter(r=>r.specie===e.sp&&r.k>0);return{sp:e.sp,sn:e.sp.split(' ').slice(0,2).map((w,i)=>i===0?w[0]+'.':w).join(' '),k:mean(sub.map(r=>r.k)),ord:e.ord,n:sub.length};}).filter(e=>e.k>0).sort((a,b)=>b.k-a.k);
+  // Usar D.tK (já com outliers removidos) para calcular K por espécie
+  const kSp=(D.t7||[]).map(e=>{
+    const sub=(D.tK||[]).filter(r=>r.specie===e.sp);
+    return{sp:e.sp,sn:e.sp.split(' ').slice(0,2).map((w,i)=>i===0?w[0]+'.':w).join(' '),k:mean(sub.map(r=>r.k)),ord:e.ord,n:sub.length};
+  }).filter(e=>e.k>0&&e.n>0).sort((a,b)=>b.k-a.k);
   const h2=Math.max(200,kSp.length*30);
   document.getElementById('chart-k-especies').closest('div').style.height=h2+'px';
   mkChart('chart-k-especies',{type:'bar',data:{labels:kSp.map(e=>e.sn),datasets:[{label:'K médio',data:kSp.map(e=>e.k),backgroundColor:kSp.map(e=>e.ord==='Siluriformes'?SIL+'cc':CHA+'cc'),borderColor:kSp.map(e=>e.ord==='Siluriformes'?SIL:CHA),borderWidth:1.5,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:{color:'#f1f5f9'},ticks:{...tickOpts,font:{size:10,style:'italic',family:'Trebuchet MS'}}}}}});
   const min=arr=>arr.length?Math.min(...arr):0,max=arr=>arr.length?Math.max(...arr):0;
   const tbl=document.getElementById('tbl-k');
   tbl.querySelector('thead').innerHTML=`<tr>${['Espécie','Ord','n','K médio','K mín','K máx','CT médio','PT médio'].map(h=>`<th>${h}</th>`).join('')}</tr>`;
-  tbl.querySelector('tbody').innerHTML=kSp.map(e=>{const sub=valid.filter(r=>r.specie===e.sp&&r.k>0);const ks=sub.map(r=>r.k);return`<tr><td style="font-style:italic;font-weight:700;color:#1e3a5f">${e.sp}</td><td><span class="badge ${e.ord==='Siluriformes'?'badge-sil':'badge-cha'}">${e.ord==='Siluriformes'?'Sil.':'Cha.'}</span></td><td>${sub.length}</td><td style="font-weight:700;color:#8b5cf6">${mean(ks).toFixed(4)}</td><td>${min(ks).toFixed(4)}</td><td>${max(ks).toFixed(4)}</td><td>${mean(sub.map(r=>r.ct)).toFixed(1)}</td><td>${Math.round(mean(sub.map(r=>r.pt))).toLocaleString('pt-BR')}</td></tr>`;}).join('');
+  tbl.querySelector('tbody').innerHTML=kSp.map(e=>{const sub=(D.tK||[]).filter(r=>r.specie===e.sp);const ks=sub.map(r=>r.k);return`<tr><td style="font-style:italic;font-weight:700;color:#1e3a5f">${e.sp}</td><td><span class="badge ${e.ord==='Siluriformes'?'badge-sil':'badge-cha'}">${e.ord==='Siluriformes'?'Sil.':'Cha.'}</span></td><td>${sub.length}</td><td style="font-weight:700;color:#8b5cf6">${mean(ks).toFixed(4)}</td><td>${min(ks).toFixed(4)}</td><td>${max(ks).toFixed(4)}</td><td>${mean(sub.map(r=>r.ct)).toFixed(1)}</td><td>${Math.round(mean(sub.map(r=>r.pt))).toLocaleString('pt-BR')}</td></tr>`;}).join('');
   const spList=[...new Set(valid.filter(r=>r.ct>0&&r.pt>0).map(r=>r.specie))].sort();
   const sel=document.getElementById('sel-pc-sp');
   if(sel){
@@ -1478,7 +1486,48 @@ window.renderPesoComp=renderPesoComp; window.renderIGSEspecie=renderIGSEspecie;
 window.dlCSV=dlCSV; window.dlCSVSexo=dlCSVSexo; window.dlCSVGonadas=dlCSVGonadas;
 window.dlCSVPC=dlCSVPC; window.dlCSVIGSEsp=dlCSVIGSEsp; window.dlChartSVG=dlChartSVG;
 window.selecionarUsuario=selecionarUsuario; window.confirmarUsuario=confirmarUsuario;
-window.abrirAnalises=abrirAnalises; window.renderTudo=renderTudo; window.carregarPainelAtualizacoes=carregarPainelAtualizacoes;
+window.abrirAnalises=abrirAnalises; window.renderTudo=renderTudo; window.limparBanco=limparBanco; window.carregarPainelAtualizacoes=carregarPainelAtualizacoes;
+
+/* ════ Limpar banco ════ */
+async function limparBanco(){
+  if(!confirm('⚠️ ATENÇÃO\n\nIsso vai APAGAR todos os registros do Firebase.\n\nContinuar?')) return;
+  if(!confirm('Tem certeza absoluta? Essa ação não pode ser desfeita.')) return;
+
+  const nome = prompt('Digite seu nome para confirmar:','');
+  if(!nome || nome.trim().length < 2){ alert('Nome inválido. Operação cancelada.'); return; }
+
+  setStatus('Apagando banco...','warn');
+  showLoadingOverlay(true);
+
+  try {
+    // Buscar todos os documentos em lotes
+    let total = 0;
+    let snap = await db.collection(COL).limit(500).get();
+    while(!snap.empty){
+      const batch = db.batch();
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      total += snap.docs.length;
+      setStatus(`Apagando... ${total} removidos`,'warn');
+      snap = await db.collection(COL).limit(500).get();
+    }
+    // Limpar cache local
+    allRecords = [];
+    await idbClear('registros');
+    await idbClear('pending');
+    showLoadingOverlay(false);
+    registrarAtividade('backup', `Banco limpo por ${nome} — ${total} registros removidos`);
+    setStatus(`✅ Banco limpo — ${total} registros removidos`,'ok');
+    alert(`Banco limpo com sucesso.\n${total} registros removidos.\n\nAgora faça o upload da nova planilha.`);
+    atualizarStatusBanco();
+    switchWelcomeTab('upload');
+  } catch(e){
+    showLoadingOverlay(false);
+    console.error('limparBanco:', e);
+    alert('Erro ao limpar banco: ' + e.message);
+    setStatus('Erro ao limpar banco','err');
+  }
+}
 
 /* Fechar modais clicando fora */
 document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});});
