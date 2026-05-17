@@ -1007,10 +1007,27 @@ async function importarPlanilhaCampo(wb,sheetName){
       od:iXOD>=0?+r[iXOD]||0:0,cond:iXCond>=0?+r[iXCond]||0:0,
       ph:iXph>=0?+r[iXph]||0:0,sec:iXTransp>=0?+r[iXTransp]||0:0,
     };
-    await gravarRegistro(rec);
+    // Batch write — economiza quota: 400 writes = 1 operação no Firebase
+    if(isOnline && batch){
+      batch.set(db.collection(COL).doc(String(itemId)), rec);
+      batchCount++;
+      if(batchCount >= 400){
+        setStatus(`Gravando lote ${Math.ceil((i+1)/400)} de ${Math.ceil(linhas.length/400)}...`,'info');
+        await batch.commit();
+        batch = db.batch(); batchCount = 0;
+        await new Promise(r2=>setTimeout(r2,100));
+      }
+    } else {
+      await gravarRegistro(rec);
+    }
     const ix=allRecords.findIndex(x=>String(x.item)===String(itemId));
     if(ix>=0)allRecords[ix]=rec;else allRecords.push(rec);
-    if(i%50===0){setStatus(`Importando: ${i+1}/${linhas.length}...`,'info');await new Promise(r2=>setTimeout(r2,0));}
+    if(i%100===0) await new Promise(r2=>setTimeout(r2,0));
+  }
+  // Commit último lote
+  if(isOnline && batch && batchCount>0){
+    setStatus('Gravando lote final...','info');
+    await batch.commit();
   }
   console.log(`[FishRep] ${sheetName}: +${novos} novos, ${sobrescritos} sob, ${pulados} pul`);
   return{novos,sobrescritos,pulados,cancelado};
