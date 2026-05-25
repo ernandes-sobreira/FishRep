@@ -974,6 +974,8 @@ async function importarPlanilhaCampo(wb,sheetName){
   const linhas=data.slice(1).filter(r=>r[iSpecie]&&r[iOrdem]);
   let novos=0,sobrescritos=0,pulados=0,cancelado=false;
   const bulkMode=allRecords.length===0;
+  let batch = isOnline ? db.batch() : null;
+  let batchCount = 0;
   showProgress(0,linhas.length);
   for(let i=0;i<linhas.length;i++){
     if(cancelado)break;
