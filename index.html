@@ -983,7 +983,7 @@ async function importarPlanilhaCampo(wb,sheetName){
   const ci=name=>hdr.findIndex(h=>h===name);
   const iItem=ci("Item"),iAno=ci("Ano"),iMonth=ci("Month"),iLocal=ci("Locality"),iCoord=ci("Coordinate"),iOrdem=ci("Ordem"),iSpecie=ci("Specie"),iAmostra=ci("Amostra")||ci("ID");
   const iCT=ci("CT"),iCP=ci("CP"),iPT=ci("Peso total (g)"),iPE=ci("Peso Evis (g)");
-  const iSexo=ci("Sexo"),iStage=ci("Rep Stage"),iPG=ci("Peso Gonada"),iGR=ci("GR"),iPF=ci("Peso de Fígado"),iWc=ci("Wc"),iRGS=ci("RGS1"),iIHS=ci("IHS");
+  const iSexo=ci("Sexo"),iStage=ci("Rep Stage"),iPG=ci("Peso Gonada"),iGR=ci("GR"),iPF=ci("Peso de Fígado"),iWc=ci("Wc"),iRGS=ci("IGS")>=0?ci("IGS"):ci("RGS1"),iIHS=ci("IHS");
   const iWR=ci("Level river Aver (m)")<0?ci("Level river Aver"):ci("Level river Aver (m)");
   const iXOD=ci("X OD (mg/L)")<0?ci("X OD"):ci("X OD (mg/L)");
   const iXTemp=ci("X Temp (°C)")<0?ci("X Temp"):ci("X Temp (°C)");
