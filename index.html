@@ -1582,8 +1582,7 @@ function renderKEspecie(){
 function dlCSVKEsp(){
   if(!D.tK_sp_current) return;
   const {sp,dados}=D.tK_sp_current;
-  const csv=['Mes,Estacao,n,K_medio',...dados.map(r=>`${r.m},${MONTH_SEASON_MAP[r.m]||''},${r.n},${r.k||''}`)].join('
-');
+  const csv=['Mes,Estacao,n,K_medio',...dados.map(r=>`${r.m},${MONTH_SEASON_MAP[r.m]||''},${r.n},${r.k||''}`)].join('\n');
   const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:`K_mensal_${sp.replace(/ /g,'_')}.csv`});
   document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
