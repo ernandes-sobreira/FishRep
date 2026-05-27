@@ -446,7 +446,7 @@ footer{text-align:center;padding:14px;font-size:10px;color:#94a3b8;border-top:1p
     <div id="section-1" style="display:none">
       <div class="card">
         <div class="card-hdr">
-          <div><div class="card-title">📈 IGS Mensal por Ordem</div><div class="card-sub">Ciclo reprodutivo sazonal — Siluriformes vs Characiformes</div></div>
+          <div><div class="card-title">📈 IGS Mensal por Ordem</div><div class="card-sub">Ciclo reprodutivo sazonal — Siluriformes vs Characiformes · Geral = média de todos os indivíduos do mês</div></div>
           <button class="btn btn-green btn-sm" onclick="dlCSV('t1','igs_mensal')">⬇ CSV</button>
         </div>
         <div style="height:300px"><canvas id="chart-igs-mensal"></canvas></div>
@@ -1279,7 +1279,7 @@ function renderIGSMensal(){
   mkChart('chart-igs-mensal',{type:'line',data:{labels:data.map(r=>r.m),datasets:[
     {label:'Siluriformes',data:data.map(r=>r.sil||null),borderColor:SIL,backgroundColor:SIL+'22',fill:false,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false},
     {label:'Characiformes',data:data.map(r=>r.cha||null),borderColor:CHA,backgroundColor:CHA+'22',fill:false,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false},
-    {label:'Geral',data:data.map(r=>r.all||null),borderColor:'#374151',backgroundColor:'transparent',fill:false,tension:.4,pointRadius:3,borderWidth:1.5,borderDash:[4,3],spanGaps:false},
+    {label:'Geral (todos)',data:data.map(r=>r.all||null),borderColor:'#374151',backgroundColor:'transparent',fill:false,tension:.4,pointRadius:3,borderWidth:1.5,borderDash:[4,3],spanGaps:false},
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts},scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'IGS (%)',color:'#64748b',font:{size:11}}}}}});
   const tbl=document.getElementById('tbl-igs-mensal');
   tbl.querySelector('thead').innerHTML=`<tr><th>Mês</th><th>Estação</th><th>n Sil.</th><th>RGS Sil.</th><th>n Char.</th><th>RGS Char.</th><th>RGS Geral</th></tr>`;
