@@ -446,7 +446,7 @@ footer{text-align:center;padding:14px;font-size:10px;color:#94a3b8;border-top:1p
     <div id="section-1" style="display:none">
       <div class="card">
         <div class="card-hdr">
-          <div><div class="card-title">📈 IGS/RGS Mensal por Ordem</div><div class="card-sub">Ciclo reprodutivo sazonal — Siluriformes vs Characiformes</div></div>
+          <div><div class="card-title">📈 IGS Mensal por Ordem</div><div class="card-sub">Ciclo reprodutivo sazonal — Siluriformes vs Characiformes</div></div>
           <button class="btn btn-green btn-sm" onclick="dlCSV('t1','igs_mensal')">⬇ CSV</button>
         </div>
         <div style="height:300px"><canvas id="chart-igs-mensal"></canvas></div>
@@ -458,7 +458,7 @@ footer{text-align:center;padding:14px;font-size:10px;color:#94a3b8;border-top:1p
     <div id="section-2" style="display:none">
       <div class="card">
         <div class="card-hdr">
-          <div><div class="card-title">🐟 IGS/RGS por Espécie</div><div class="card-sub">Média do índice gonadossomático por espécie</div></div>
+          <div><div class="card-title">🐟 IGS por Espécie</div><div class="card-sub">Média do índice gonadossomático por espécie</div></div>
           <button class="btn btn-green btn-sm" onclick="dlCSV('t2','especies')">⬇ CSV</button>
         </div>
         <div style="height:320px"><canvas id="chart-especies"></canvas></div>
@@ -470,7 +470,7 @@ footer{text-align:center;padding:14px;font-size:10px;color:#94a3b8;border-top:1p
     <div id="section-3" style="display:none">
       <div class="card">
         <div class="card-hdr">
-          <div><div class="card-title">⚥ IGS/RGS por Sexo e Mês</div><div class="card-sub">Diferenças entre fêmeas e machos</div></div>
+          <div><div class="card-title">⚥ IGS por Sexo e Mês</div><div class="card-sub">Diferenças entre fêmeas e machos</div></div>
           <div style="display:flex;gap:8px;align-items:center">
             <select id="sel-sexo" onchange="renderSexo()" style="font-size:11px;padding:4px 8px;border-radius:7px;border:1px solid #bfdbfe"></select>
             <button class="btn btn-green btn-sm" onclick="dlCSVSexo()">⬇ CSV</button>
@@ -581,7 +581,7 @@ footer{text-align:center;padding:14px;font-size:10px;color:#94a3b8;border-top:1p
     <div id="section-9" style="display:none">
       <div class="card">
         <div class="card-hdr">
-          <div><div class="card-title">🔗 IGS/RGS Mensal por Espécie</div><div class="card-sub">Ciclo reprodutivo individual com IHS sobreposto</div></div>
+          <div><div class="card-title">🔗 IGS Mensal por Espécie</div><div class="card-sub">Ciclo reprodutivo individual com IHS sobreposto</div></div>
           <div style="display:flex;gap:8px;align-items:center">
             <select id="sel-igs-sp" onchange="renderIGSEspecie()" style="font-size:11px;padding:4px 8px;border-radius:7px;border:1px solid #bfdbfe"></select>
             <button class="btn btn-green btn-sm" onclick="dlCSVIGSEsp()">⬇ CSV</button>
@@ -1015,8 +1015,8 @@ async function importarPlanilhaCampo(wb,sheetName){
     const monthLabel=MONTH_CODE_MAP[monthCode]||monthCode;
     const ct=+r[iCT]||0,pt=+r[iPT]||0,pe=+r[iPE]||0,pg=+r[iPG]||0,pf=+r[iPF]||0;
     const wc=(+r[iWc]||0)||(pe-pg);
-    const rgs=iRGS>=0&&r[iRGS]!=null?+r[iRGS]:(wc>0?(pg/wc)*100:0);
-    const ihs=iIHS>=0&&r[iIHS]!=null?+r[iIHS]:(wc>0?(pf/wc)*100:0);
+    const rgs=iRGS>=0&&r[iRGS]!=null?+r[iRGS]:(pt>0?(pg/pt)*100:0);
+    const ihs=iIHS>=0&&r[iIHS]!=null?+r[iIHS]:(pt>0?(pf/pt)*100:0);
     const rec={
       item:itemId,ano:+r[iAno]||0,month:monthCode,monthLabel,
       season:MONTH_SEASON_MAP[monthLabel]||'—',
@@ -1062,7 +1062,7 @@ async function addManualRecord(){
   const itemId=+document.getElementById('f-item').value||(Math.max(0,...allRecords.map(r=>isNaN(+r.item)?0:+r.item||0))+1);
   const ct=+document.getElementById('f-ct').value||0,pt=+document.getElementById('f-pt').value||0;
   const pe=+document.getElementById('f-pe').value||0,pg=+document.getElementById('f-pg').value||0,pf=+document.getElementById('f-pf').value||0;
-  const wc=pe-pg,rgs=wc>0?(pg/wc)*100:0,ihs=wc>0?(pf/wc)*100:0;
+  const wc=pe-pg,rgs=pt>0?(pg/pt)*100:0,ihs=pt>0?(pf/pt)*100:0;
   const monthCode=document.getElementById('f-month').value;
   const monthLabel=MONTH_CODE_MAP[monthCode]||monthCode;
   if(!bulkMode&&isDuplicata(itemId)){
@@ -1280,7 +1280,7 @@ function renderIGSMensal(){
     {label:'Siluriformes',data:data.map(r=>r.sil||null),borderColor:SIL,backgroundColor:SIL+'22',fill:false,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false},
     {label:'Characiformes',data:data.map(r=>r.cha||null),borderColor:CHA,backgroundColor:CHA+'22',fill:false,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false},
     {label:'Geral',data:data.map(r=>r.all||null),borderColor:'#374151',backgroundColor:'transparent',fill:false,tension:.4,pointRadius:3,borderWidth:1.5,borderDash:[4,3],spanGaps:false},
-  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts},scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'RGS/IGS (%)',color:'#64748b',font:{size:11}}}}}});
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts},scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'IGS (%)',color:'#64748b',font:{size:11}}}}}});
   const tbl=document.getElementById('tbl-igs-mensal');
   tbl.querySelector('thead').innerHTML=`<tr><th>Mês</th><th>Estação</th><th>n Sil.</th><th>RGS Sil.</th><th>n Char.</th><th>RGS Char.</th><th>RGS Geral</th></tr>`;
   tbl.querySelector('tbody').innerHTML=data.map(r=>`<tr><td style="font-weight:700">${r.m}</td><td>${r.s}</td><td>${r.silN}</td><td style="color:${SIL};font-weight:700">${f3(r.sil)}</td><td>${r.chaN}</td><td style="color:${CHA};font-weight:700">${f3(r.cha)}</td><td>${f3(r.all)}</td></tr>`).join('');
@@ -1290,7 +1290,7 @@ function renderEspecies(){
   const data=(D.t2||[]).sort((a,b)=>b.rgs-a.rgs);
   const h=Math.max(200,data.length*28);
   document.getElementById('chart-especies').closest('div').style.height=h+'px';
-  mkChart('chart-especies',{type:'bar',data:{labels:data.map(e=>e.sn),datasets:[{label:'RGS/IGS médio',data:data.map(e=>e.rgs),backgroundColor:data.map(e=>e.ord==='Siluriformes'?SIL+'cc':CHA+'cc'),borderColor:data.map(e=>e.ord==='Siluriformes'?SIL:CHA),borderWidth:1.5,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:{color:'#f1f5f9'},ticks:{...tickOpts,font:{size:10,style:'italic',family:'Trebuchet MS'}}}}}});
+  mkChart('chart-especies',{type:'bar',data:{labels:data.map(e=>e.sn),datasets:[{label:'IGS médio',data:data.map(e=>e.rgs),backgroundColor:data.map(e=>e.ord==='Siluriformes'?SIL+'cc':CHA+'cc'),borderColor:data.map(e=>e.ord==='Siluriformes'?SIL:CHA),borderWidth:1.5,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:{color:'#f1f5f9'},ticks:{...tickOpts,font:{size:10,style:'italic',family:'Trebuchet MS'}}}}}});
   const tbl=document.getElementById('tbl-especies');
   tbl.querySelector('thead').innerHTML=`<tr>${["Espécie","Ord","Família","n","RGS","DP RGS","IHS","CT (cm)","PM (g)","n ♀","n ♂"].map(h=>`<th>${h}</th>`).join('')}</tr>`;
   tbl.querySelector('tbody').innerHTML=data.map(e=>`<tr><td style="font-style:italic;font-weight:700;color:#1e3a5f">${e.sp}</td><td><span class="badge ${e.ord==='Siluriformes'?'badge-sil':'badge-cha'}">${e.ord==='Siluriformes'?'Sil.':'Cha.'}</span></td><td style="font-size:10px">${e.fam}</td><td>${e.n}</td><td style="font-weight:700;color:${e.rgs>2?"#e03c3c":"#374151"}">${f3(e.rgs)}</td><td>${f3(e.sd)}</td><td style="color:#7c3aed;font-weight:700">${e.ihs>0?f3(e.ihs):"—"}</td><td>${f2(e.tl)}</td><td>${e.tw>0?Math.round(e.tw).toLocaleString('pt-BR'):'–'}</td><td>${e.nF}</td><td>${e.nM}</td></tr>`).join('');
@@ -1359,7 +1359,7 @@ function renderRecordes(){
     {icon:'⚖️',label:'Mais leve',unit:'g',fn:r=>r.pt,fmt:v=>v.toLocaleString('pt-BR'),asc:true},
     {icon:'🫀',label:'Fígado maior',unit:'g',fn:r=>r.pf,fmt:v=>v.toFixed(1)},
     {icon:'🧬',label:'Gônada maior',unit:'g',fn:r=>r.pg,fmt:v=>v.toFixed(1)},
-    {icon:'📈',label:'IGS/RGS maior',unit:'%',fn:r=>r.rgs,fmt:v=>v.toFixed(3)},
+    {icon:'📈',label:'IGS maior',unit:'%',fn:r=>r.rgs,fmt:v=>v.toFixed(3)},
     {icon:'🫀',label:'IHS maior',unit:'%',fn:r=>r.ihs,fmt:v=>v.toFixed(3)},
   ];
   const grid=document.getElementById('recordes-grid');
@@ -1408,7 +1408,7 @@ function renderIndices(){
   setTimeout(renderPesoComp, 50);
   setTimeout(renderKEspecie, 80);
   const ihsMensal=MN_LABEL.map(m=>{const sub=valid.filter(r=>r.monthLabel===m);return{m,ihs:mean(sub.map(r=>r.ihs).filter(v=>v>0)),igs:mean(sub.map(r=>r.rgs).filter(v=>v>0))};});
-  mkChart('chart-ihs-igs',{type:'line',data:{labels:ihsMensal.map(r=>r.m),datasets:[{label:'IGS/RGS',data:ihsMensal.map(r=>r.igs||null),borderColor:'#0077b6',backgroundColor:'#0077b622',fill:false,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false},{label:'IHS',data:ihsMensal.map(r=>r.ihs||null),borderColor:'#7c3aed',backgroundColor:'#7c3aed22',fill:false,tension:.4,pointRadius:4,borderWidth:2.5,borderDash:[5,3],spanGaps:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts},scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'Índice (%)',color:'#64748b',font:{size:11}}}}}});
+  mkChart('chart-ihs-igs',{type:'line',data:{labels:ihsMensal.map(r=>r.m),datasets:[{label:'IGS',data:ihsMensal.map(r=>r.igs||null),borderColor:'#0077b6',backgroundColor:'#0077b622',fill:false,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false},{label:'IHS',data:ihsMensal.map(r=>r.ihs||null),borderColor:'#7c3aed',backgroundColor:'#7c3aed22',fill:false,tension:.4,pointRadius:4,borderWidth:2.5,borderDash:[5,3],spanGaps:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts},scales:{x:{grid:gridOpts,ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'Índice (%)',color:'#64748b',font:{size:11}}}}}});
 }
 
 function renderPesoComp(){
