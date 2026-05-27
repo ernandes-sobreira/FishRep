@@ -930,7 +930,7 @@ function handleFile(inp){
     catch(err){console.error('[FishRep] Erro xlsx:',err);alert("Arquivo inválido. Use o modelo .xlsx do FishRep.");document.getElementById("dz-icon").textContent="📂";document.getElementById("dz-title").textContent="Arraste sua planilha aqui";return;}
     console.log('[FishRep] Abas:',wb.SheetNames);
     try{
-      const CAMPO=["Planilha1","Dados_Geral","Dourado","Sema","FISIO PINTADO"];
+      const CAMPO=["Inserir_Dados","Planilha1","Dados_Geral","Dourado","Sema","FISIO PINTADO"];
       const sheets=CAMPO.filter(n=>wb.SheetNames.includes(n));
       if(sheets.length>0){
         await pedirUsuarioSeNecessario();
