@@ -811,7 +811,10 @@ async function carregarTodosOsDados(){
   try{
     if(isOnline){
       console.log('[FishRep] Buscando Firebase...');
-      const snap=await db.collection(COL).get();
+      // Timeout de 15s para não ficar travado
+      const snapPromise=db.collection(COL).get();
+      const timeoutPromise=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Timeout Firebase (15s)')),15000));
+      const snap=await Promise.race([snapPromise,timeoutPromise]);
       allRecords=snap.docs.map(d=>d.data());
       console.log('[FishRep] Firebase:',allRecords.length,'registros');
       if(idb){try{await idbClear("registros");for(const r of allRecords)await idbPut("registros",r);}catch(e){console.warn('[FishRep] Cache:',e);}}
@@ -823,10 +826,12 @@ async function carregarTodosOsDados(){
   }catch(e){
     console.warn('[FishRep] Firebase falhou:',e.message||e);
     allRecords=idb?await idbGetAll("registros").catch(()=>[]):[];
-    setStatus(`Erro Firebase · ${allRecords.length} em cache`,'err');
+    const msg=e.message&&e.message.includes('Timeout')?'Timeout — verifique conexão':'Erro Firebase';
+    setStatus(`${msg} · ${allRecords.length} em cache`,'err');
+  }finally{
+    showLoadingOverlay(false);
+    atualizarStatusBanco();
   }
-  showLoadingOverlay(false);
-  atualizarStatusBanco();
 }
 
 function atualizarStatusBanco(){
