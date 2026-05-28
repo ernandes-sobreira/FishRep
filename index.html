@@ -244,6 +244,25 @@ footer{text-align:center;padding:14px;font-size:10px;color:#94a3b8;border-top:1p
   </div>
 </div>
 
+<!-- ===== MODAL SENHA ===== -->
+<div class="modal-overlay" id="modal-senha" style="z-index:1001">
+  <div class="modal" style="max-width:360px">
+    <div style="text-align:center;margin-bottom:4px;font-size:32px">🔒</div>
+    <div class="modal-title">Acesso Restrito</div>
+    <div class="modal-sub" id="modal-senha-msg">Esta ação requer senha de pesquisador LIPAN</div>
+    <div style="margin-top:16px">
+      <input id="input-senha" type="password" placeholder="Digite a senha"
+        style="width:100%;box-sizing:border-box;padding:11px 14px;border:1.5px solid #bfdbfe;border-radius:10px;font-size:14px;font-family:Trebuchet MS,sans-serif;color:#1e3a5f;outline:none"
+        onkeydown="if(event.key==='Enter') verificarSenha()"/>
+      <div id="senha-erro" style="color:#e03c3c;font-size:11px;margin-top:6px;display:none">Senha incorreta. Tente novamente.</div>
+      <button class="btn btn-green" style="width:100%;margin-top:10px;padding:11px;font-size:14px;border-radius:10px"
+        onclick="verificarSenha()">Confirmar →</button>
+      <button class="btn" style="width:100%;margin-top:8px;background:#f8fafc;color:#94a3b8;border:1.5px solid #e2e8f0;font-size:11px;padding:8px;border-radius:10px"
+        onclick="cancelarSenha()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL DUPLICATA ===== -->
 <div class="modal-overlay" id="modal-duplicata">
   <div class="modal">
@@ -920,8 +939,13 @@ async function resolverDuplicata(item,specie){
 
 /* ════ Upload de planilha ════ */
 function handleDrop(e){handleFile({files:e.dataTransfer.files});}
-function handleFile(inp){
+async function handleFile(inp){
   const file=inp.files[0];if(!file)return;
+  const ok=await pedirSenha('Upload de dados requer senha de pesquisador LIPAN');
+  if(!ok) return;
+  // Manter tela acesa durante upload (Wake Lock API)
+  let wakeLock=null;
+  try{if('wakeLock' in navigator) wakeLock=await navigator.wakeLock.request('screen');}catch(e){}
   console.log('[FishRep] handleFile:',file.name);
   document.getElementById("dz-icon").textContent="⏳";
   document.getElementById("dz-title").textContent="Lendo "+file.name+"...";
@@ -971,6 +995,9 @@ function handleFile(inp){
       alert("Erro durante importação: "+err.message);
       document.getElementById("dz-icon").textContent="📂";
       document.getElementById("dz-title").textContent="Arraste sua planilha aqui";
+    }finally{
+      // Liberar wake lock
+      if(wakeLock){try{await wakeLock.release();}catch(e){}}
     }
   };
   reader.readAsArrayBuffer(file);
@@ -1032,11 +1059,25 @@ async function importarPlanilhaCampo(wb,sheetName){
     if(isOnline && batch){
       batch.set(db.collection(COL).doc(String(itemId)), rec);
       batchCount++;
-      if(batchCount >= 400){
-        setStatus(`Gravando lote ${Math.ceil((i+1)/400)} de ${Math.ceil(linhas.length/400)}...`,'info');
-        await batch.commit();
+      if(batchCount >= 200){
+        const loteNum=Math.ceil((i+1)/400);
+        const totalLotes=Math.ceil(linhas.length/400);
+        setStatus(`Gravando lote ${loteNum} de ${totalLotes}...`,'info');
+        // Retry automático até 3x se falhar
+        let tentativas=0;
+        while(tentativas<3){
+          try{
+            await batch.commit();
+            break;
+          }catch(e){
+            tentativas++;
+            console.warn(`[FishRep] Lote ${loteNum} falhou (tentativa ${tentativas}):`,e.message);
+            if(tentativas>=3) throw e;
+            await new Promise(r2=>setTimeout(r2,2000*tentativas)); // espera 2s, 4s, 6s
+          }
+        }
         batch = db.batch(); batchCount = 0;
-        await new Promise(r2=>setTimeout(r2,100));
+        await new Promise(r2=>setTimeout(r2,300)); // pausa maior entre lotes
       }
     } else {
       await gravarRegistro(rec);
@@ -1045,10 +1086,20 @@ async function importarPlanilhaCampo(wb,sheetName){
     if(ix>=0)allRecords[ix]=rec;else allRecords.push(rec);
     if(i%100===0) await new Promise(r2=>setTimeout(r2,0));
   }
-  // Commit último lote
+  // Commit último lote com retry
   if(isOnline && batch && batchCount>0){
     setStatus('Gravando lote final...','info');
-    await batch.commit();
+    let tentativas=0;
+    while(tentativas<3){
+      try{
+        await batch.commit();
+        break;
+      }catch(e){
+        tentativas++;
+        if(tentativas>=3) throw e;
+        await new Promise(r2=>setTimeout(r2,2000*tentativas));
+      }
+    }
   }
   console.log(`[FishRep] ${sheetName}: +${novos} novos, ${sobrescritos} sob, ${pulados} pul`);
   return{novos,sobrescritos,pulados,cancelado};
@@ -1058,6 +1109,8 @@ async function importarPlanilhaCampo(wb,sheetName){
 async function addManualRecord(){
   const sp=document.getElementById('f-specie').value.trim();
   if(!sp){alert('Informe a espécie.');return;}
+  const okS=await pedirSenha('Inserção manual requer senha de pesquisador LIPAN');
+  if(!okS) return;
   await pedirUsuarioSeNecessario();
   const itemId=+document.getElementById('f-item').value||(Math.max(0,...allRecords.map(r=>isNaN(+r.item)?0:+r.item||0))+1);
   const ct=+document.getElementById('f-ct').value||0,pt=+document.getElementById('f-pt').value||0;
@@ -1477,11 +1530,13 @@ window.renderSexo=renderSexo; window.renderGonadas=renderGonadas; window.renderA
 window.renderPesoComp=renderPesoComp; window.renderIGSEspecie=renderIGSEspecie;
 window.dlCSV=dlCSV; window.dlCSVSexo=dlCSVSexo; window.dlCSVGonadas=dlCSVGonadas;
 window.dlCSVPC=dlCSVPC; window.dlCSVIGSEsp=dlCSVIGSEsp; window.dlChartSVG=dlChartSVG; window.renderKEspecie=renderKEspecie; window.dlCSVKEsp=dlCSVKEsp;
-window.selecionarUsuario=selecionarUsuario; window.confirmarUsuario=confirmarUsuario;
+window.selecionarUsuario=selecionarUsuario; window.confirmarUsuario=confirmarUsuario; window.verificarSenha=verificarSenha; window.cancelarSenha=cancelarSenha;
 window.abrirAnalises=abrirAnalises; window.renderTudo=renderTudo; window.limparBanco=limparBanco; window.carregarPainelAtualizacoes=carregarPainelAtualizacoes;
 
 /* ════ Limpar banco ════ */
 async function limparBanco(){
+  const ok=await pedirSenha('Limpar banco requer senha de pesquisador LIPAN');
+  if(!ok) return;
   if(!confirm('⚠️ ATENÇÃO\n\nIsso vai APAGAR todos os registros do Firebase.\n\nContinuar?')) return;
   if(!confirm('Tem certeza absoluta? Essa ação não pode ser desfeita.')) return;
 
@@ -1585,6 +1640,57 @@ function dlCSVKEsp(){
   const csv=['Mes,Estacao,n,K_medio',...dados.map(r=>`${r.m},${MONTH_SEASON_MAP[r.m]||''},${r.n},${r.k||''}`)].join('\n');
   const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:`K_mensal_${sp.replace(/ /g,'_')}.csv`});
   document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+
+/* ════ SENHA DE PESQUISADOR ════ */
+// Hash SHA-256 da senha "LIPAN2025" — nunca expõe a senha em texto
+// Para mudar a senha: gerar novo hash em: https://emn178.github.io/online-tools/sha256.html
+const SENHA_HASH = '28083492c01f67b088e48d9cdf64cf31eb833e9a6e298b2a316f667c2c2b67ab';
+
+let _resolveSenha = null;
+let _senhaAutorizada = false;
+let _senhaExpira = 0; // timestamp — sessão de 2h
+
+function senhaValida(){
+  return _senhaAutorizada && Date.now() < _senhaExpira;
+}
+
+async function calcSHA256(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function pedirSenha(msg){
+  if(senhaValida()) return Promise.resolve(true);
+  return new Promise(res=>{
+    _resolveSenha = res;
+    document.getElementById('modal-senha-msg').textContent = msg || 'Esta ação requer senha de pesquisador LIPAN';
+    document.getElementById('senha-erro').style.display = 'none';
+    document.getElementById('input-senha').value = '';
+    document.getElementById('modal-senha').classList.add('open');
+    setTimeout(()=>document.getElementById('input-senha').focus(), 200);
+  });
+}
+
+async function verificarSenha(){
+  const val = document.getElementById('input-senha').value;
+  const hash = await calcSHA256(val);
+  if(hash === SENHA_HASH){
+    _senhaAutorizada = true;
+    _senhaExpira = Date.now() + 2*60*60*1000; // 2 horas
+    document.getElementById('modal-senha').classList.remove('open');
+    document.getElementById('senha-erro').style.display = 'none';
+    if(_resolveSenha){ _resolveSenha(true); _resolveSenha = null; }
+  } else {
+    document.getElementById('senha-erro').style.display = 'block';
+    document.getElementById('input-senha').select();
+  }
+}
+
+function cancelarSenha(){
+  document.getElementById('modal-senha').classList.remove('open');
+  document.getElementById('senha-erro').style.display = 'none';
+  if(_resolveSenha){ _resolveSenha(false); _resolveSenha = null; }
 }
 
 /* Fechar modais clicando fora */
