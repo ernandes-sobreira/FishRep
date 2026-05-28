@@ -205,6 +205,9 @@ footer{text-align:center;padding:14px;font-size:10px;color:#94a3b8;border-top:1p
     <button class="tab-btn" onclick="showTab(7)">🏆 Recordes</button>
     <button class="tab-btn" onclick="showTab(8)">📐 Índices</button>
     <button class="tab-btn" onclick="showTab(9)">🔗 IGS × Espécie</button>
+    <button class="tab-btn" onclick="showTab(10)">🫀 IHS</button>
+    <button class="tab-btn" onclick="showTab(11)">📏 Peso × Comprimento</button>
+    <button class="tab-btn" onclick="showTab(12)">📊 Estrutura Pop.</button>
     <button class="tab-reset" onclick="resetApp()">🏠 Início</button>
   </div>
 </div>
@@ -590,10 +593,6 @@ footer{text-align:center;padding:14px;font-size:10px;color:#94a3b8;border-top:1p
         <div style="height:300px"><canvas id="chart-pc"></canvas></div>
         <div id="pc-stats" style="margin-top:10px;background:#f0f9ff;border-radius:8px;padding:10px 14px;font-size:12px;color:#1e3a5f"></div>
       </div>
-      <div class="card" style="margin-top:14px">
-        <div class="card-hdr"><div><div class="card-title">🫀 IHS e IGS Mensais</div><div class="card-sub">Índice Hepatossomático e Gonadossomático combinados</div></div></div>
-        <div style="height:280px"><canvas id="chart-ihs-igs"></canvas></div>
-      </div>
     </div>
 
     <!-- SECTION 9: IGS POR ESPÉCIE -->
@@ -608,6 +607,80 @@ footer{text-align:center;padding:14px;font-size:10px;color:#94a3b8;border-top:1p
         </div>
         <div style="height:300px"><canvas id="chart-igs-sp"></canvas></div>
         <div class="scroll" style="margin-top:12px"><table id="tbl-igs-sp"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- SECTION 10: IHS -->
+    <div id="section-10" style="display:none">
+      <div class="card">
+        <div class="card-hdr">
+          <div><div class="card-title">🫀 IHS Mensal Geral</div><div class="card-sub">Índice Hepatossomático = (Peso Fígado / Peso Total) × 100</div></div>
+          <button class="btn btn-green btn-sm" onclick="dlCSVIHS()">⬇ CSV</button>
+        </div>
+        <div style="height:280px"><canvas id="chart-ihs-mensal"></canvas></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="card-hdr">
+          <div><div class="card-title">🫀 IGS e IHS Combinados — Geral</div>
+          <div class="card-sub">Comparação mensal dos dois índices — todos os indivíduos</div></div>
+        </div>
+        <div style="height:260px"><canvas id="chart-ihs-igs"></canvas></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="card-hdr">
+          <div><div class="card-title">🫀 IHS Mensal por Espécie</div><div class="card-sub">Ciclo sazonal do IHS por espécie — ♀ e ♂</div></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="sel-ihs-sp" onchange="renderIHSEspecie()" style="font-size:11px;padding:4px 8px;border-radius:7px;border:1px solid #bfdbfe"></select>
+            <button class="btn btn-green btn-sm" onclick="dlCSVIHSEsp()">⬇ CSV</button>
+          </div>
+        </div>
+        <div style="height:280px"><canvas id="chart-ihs-sp"></canvas></div>
+        <div class="scroll" style="margin-top:10px"><table id="tbl-ihs-sp"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- SECTION 11: PESO × COMPRIMENTO -->
+    <div id="section-11" style="display:none">
+      <div class="card">
+        <div class="card-hdr">
+          <div><div class="card-title">📏 Relação Peso × Comprimento</div><div class="card-sub">PT = a × CT^b · Regressão log-log por espécie</div></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="sel-pc-sp2" onchange="renderPesoComp2()" style="font-size:11px;padding:4px 8px;border-radius:7px;border:1px solid #bfdbfe"></select>
+            <select id="sel-pc-sexo" onchange="renderPesoComp2()" style="font-size:11px;padding:4px 8px;border-radius:7px;border:1px solid #bfdbfe">
+              <option value="todos">Todos</option>
+              <option value="F">♀ Fêmeas</option>
+              <option value="M">♂ Machos</option>
+            </select>
+            <button class="btn btn-green btn-sm" onclick="dlCSVPC2()">⬇ CSV</button>
+          </div>
+        </div>
+        <div style="height:340px"><canvas id="chart-pc2"></canvas></div>
+        <div id="pc2-stats" style="margin-top:10px;background:#f0f9ff;border-radius:8px;padding:10px 14px;font-size:12px;color:#1e3a5f"></div>
+      </div>
+    </div>
+
+    <!-- SECTION 12: ESTRUTURA POPULACIONAL -->
+    <div id="section-12" style="display:none">
+      <div class="card">
+        <div class="card-hdr">
+          <div><div class="card-title">📊 Estrutura de Comprimento</div><div class="card-sub">Frequência de captura por classe de CT</div></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="sel-pop-sp" onchange="renderEstruturaPop()" style="font-size:11px;padding:4px 8px;border-radius:7px;border:1px solid #bfdbfe"></select>
+            <select id="sel-pop-var" onchange="renderEstruturaPop()" style="font-size:11px;padding:4px 8px;border-radius:7px;border:1px solid #bfdbfe">
+              <option value="ct">Comprimento Total (CT)</option>
+              <option value="pt">Peso Total (PT)</option>
+            </select>
+            <button class="btn btn-green btn-sm" onclick="dlCSVPop()">⬇ CSV</button>
+          </div>
+        </div>
+        <div style="height:300px"><canvas id="chart-pop-hist"></canvas></div>
+        <div id="pop-stats" style="margin-top:10px;background:#f0f9ff;border-radius:8px;padding:10px 14px;font-size:12px;color:#1e3a5f"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="card-hdr">
+          <div><div class="card-title">📊 Estrutura por Sexo</div><div class="card-sub">Frequência de captura ♀ vs ♂</div></div>
+        </div>
+        <div style="height:280px"><canvas id="chart-pop-sexo"></canvas></div>
       </div>
     </div>
 
@@ -898,6 +971,8 @@ async function renderTudo(){
   try{ renderAmbiental(); }catch(e){ console.error('renderAmbiental:',e); }
   await new Promise(r=>setTimeout(r,0));
   try{ renderEstat(); }catch(e){ console.error('renderEstat:',e); }
+  await new Promise(r=>setTimeout(r,0));
+  try{ renderIHSMensal(); }catch(e){ console.error('renderIHSMensal:',e); }
   console.log('[FishRep] Todas as abas renderizadas');
 }
 
@@ -1141,6 +1216,16 @@ async function addManualRecord(){
   setStatus(`Item ${itemId} gravado · Total: ${allRecords.length}`,'ok');
   registrarAtividade('manual',`Item ${itemId} — ${sp} (${rec.sexo}, ${rec.monthLabel}/${rec.ano})`);
   document.getElementById('manual-count').textContent=allRecords.length;
+
+  // Selects das novas abas
+  const selIhsSp=document.getElementById('sel-ihs-sp');
+  if(selIhsSp){selIhsSp.innerHTML='';spList.forEach(sp=>{const o=document.createElement('option');o.value=sp;o.textContent=sp;selIhsSp.appendChild(o);});}
+
+  const selPcSp2=document.getElementById('sel-pc-sp2');
+  if(selPcSp2){selPcSp2.innerHTML='';spList.forEach(sp=>{const o=document.createElement('option');o.value=sp;o.textContent=sp;selPcSp2.appendChild(o);});}
+
+  const selPopSp=document.getElementById('sel-pop-sp');
+  if(selPopSp){selPopSp.innerHTML='';spList.forEach(sp=>{const o=document.createElement('option');o.value=sp;o.textContent=sp;selPopSp.appendChild(o);});}
   manualLog.push(rec);
   atualizarStatusBanco();
   // Atualizar preview
@@ -1211,6 +1296,9 @@ function showTab(i){
       else if(i===7)renderRecordes();
       else if(i===8){renderIndices(); setTimeout(renderKEspecie,200);}
       else if(i===9)renderIGSEspecie();
+      else if(i===10){renderIHSMensal(); setTimeout(renderIHSEspecie,100);}
+      else if(i===11)renderPesoComp2();
+      else if(i===12)renderEstruturaPop();
     }catch(e){console.error('render tab '+i+':',e);}
   },100);
 }
@@ -1230,6 +1318,16 @@ function prepararSelects(){
     renderGonadas();
   };
   document.getElementById('manual-count').textContent=allRecords.length;
+
+  // Selects das novas abas
+  const selIhsSp=document.getElementById('sel-ihs-sp');
+  if(selIhsSp){selIhsSp.innerHTML='';spList.forEach(sp=>{const o=document.createElement('option');o.value=sp;o.textContent=sp;selIhsSp.appendChild(o);});}
+
+  const selPcSp2=document.getElementById('sel-pc-sp2');
+  if(selPcSp2){selPcSp2.innerHTML='';spList.forEach(sp=>{const o=document.createElement('option');o.value=sp;o.textContent=sp;selPcSp2.appendChild(o);});}
+
+  const selPopSp=document.getElementById('sel-pop-sp');
+  if(selPopSp){selPopSp.innerHTML='';spList.forEach(sp=>{const o=document.createElement('option');o.value=sp;o.textContent=sp;selPopSp.appendChild(o);});}
 }
 
 /* ════ Chart helpers ════ */
@@ -1530,6 +1628,10 @@ window.renderSexo=renderSexo; window.renderGonadas=renderGonadas; window.renderA
 window.renderPesoComp=renderPesoComp; window.renderIGSEspecie=renderIGSEspecie;
 window.dlCSV=dlCSV; window.dlCSVSexo=dlCSVSexo; window.dlCSVGonadas=dlCSVGonadas;
 window.dlCSVPC=dlCSVPC; window.dlCSVIGSEsp=dlCSVIGSEsp; window.dlChartSVG=dlChartSVG; window.renderKEspecie=renderKEspecie; window.dlCSVKEsp=dlCSVKEsp;
+window.renderIHSMensal=renderIHSMensal; window.renderIHSEspecie=renderIHSEspecie;
+window.dlCSVIHS=dlCSVIHS; window.dlCSVIHSEsp=dlCSVIHSEsp;
+window.renderPesoComp2=renderPesoComp2; window.dlCSVPC2=dlCSVPC2;
+window.renderEstruturaPop=renderEstruturaPop; window.dlCSVPop=dlCSVPop;
 window.selecionarUsuario=selecionarUsuario; window.confirmarUsuario=confirmarUsuario; window.verificarSenha=verificarSenha; window.cancelarSenha=cancelarSenha;
 window.abrirAnalises=abrirAnalises; window.renderTudo=renderTudo; window.limparBanco=limparBanco; window.carregarPainelAtualizacoes=carregarPainelAtualizacoes;
 
@@ -1691,6 +1793,279 @@ function cancelarSenha(){
   document.getElementById('modal-senha').classList.remove('open');
   document.getElementById('senha-erro').style.display = 'none';
   if(_resolveSenha){ _resolveSenha(false); _resolveSenha = null; }
+}
+
+/* ════ IHS MENSAL GERAL ════ */
+function renderIHSMensal(){
+  const data=(D.t5||[]);
+  const vals=MN_LABEL.map(m=>{
+    const sub=allRecords.filter(r=>r.monthLabel===m&&r.ihs>0);
+    return{m, ihs:sub.length?sub.reduce((a,b)=>a+b.ihs,0)/sub.length:null, n:sub.length};
+  });
+  mkChart('chart-ihs-mensal',{type:'line',data:{
+    labels:vals.map(r=>r.m),
+    datasets:[{label:'IHS médio',data:vals.map(r=>r.ihs||null),
+      borderColor:'#7c3aed',backgroundColor:'#7c3aed22',
+      fill:true,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false}]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:gridOpts,ticks:tickOpts},
+      y:{grid:gridOpts,ticks:tickOpts,
+        title:{display:true,text:'IHS (%)',color:'#64748b',font:{size:11}}}
+    }
+  }});
+  D.tIHS_mensal=vals;
+
+  // Gráfico IGS+IHS combinados (geral)
+  const ihsCombinado=MN_LABEL.map(m=>{
+    const sub=allRecords.filter(r=>r.monthLabel===m);
+    const ihsVals=sub.filter(r=>r.ihs>0).map(r=>r.ihs);
+    const igsVals=sub.filter(r=>r.rgs>0).map(r=>r.rgs);
+    return{m,
+      ihs:ihsVals.length?ihsVals.reduce((a,b)=>a+b,0)/ihsVals.length:null,
+      igs:igsVals.length?igsVals.reduce((a,b)=>a+b,0)/igsVals.length:null
+    };
+  });
+  mkChart('chart-ihs-igs',{type:'line',data:{
+    labels:ihsCombinado.map(r=>r.m),
+    datasets:[
+      {label:'IGS',data:ihsCombinado.map(r=>r.igs||null),
+        borderColor:'#0077b6',backgroundColor:'#0077b622',
+        fill:false,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false},
+      {label:'IHS',data:ihsCombinado.map(r=>r.ihs||null),
+        borderColor:'#7c3aed',backgroundColor:'#7c3aed22',
+        fill:false,tension:.4,pointRadius:4,borderWidth:2.5,borderDash:[5,3],spanGaps:false}
+    ]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:legendOpts},
+    scales:{
+      x:{grid:gridOpts,ticks:tickOpts},
+      y:{grid:gridOpts,ticks:tickOpts,
+        title:{display:true,text:'Índice (%)',color:'#64748b',font:{size:11}}}
+    }
+  }});
+}
+
+/* ════ IHS POR ESPÉCIE ════ */
+function renderIHSEspecie(){
+  const selEl=document.getElementById('sel-ihs-sp');
+  if(!selEl||!selEl.options.length) return;
+  const sp=selEl.value; if(!sp) return;
+
+  const dados=MN_LABEL.map(m=>{
+    const sub=allRecords.filter(r=>r.specie===sp&&r.monthLabel===m);
+    const f=sub.filter(r=>r.sexo==='F');
+    const ma=sub.filter(r=>r.sexo==='M');
+    const ihsF=f.filter(r=>r.ihs>0).map(r=>r.ihs);
+    const ihsM=ma.filter(r=>r.ihs>0).map(r=>r.ihs);
+    const ihsAll=sub.filter(r=>r.ihs>0).map(r=>r.ihs);
+    return{m,
+      ihs:ihsAll.length?ihsAll.reduce((a,b)=>a+b,0)/ihsAll.length:null,
+      ihsF:ihsF.length?ihsF.reduce((a,b)=>a+b,0)/ihsF.length:null,
+      ihsM:ihsM.length?ihsM.reduce((a,b)=>a+b,0)/ihsM.length:null,
+      n:sub.length, nF:f.length, nM:ma.length
+    };
+  });
+
+  mkChart('chart-ihs-sp',{type:'line',data:{
+    labels:dados.map(r=>r.m),
+    datasets:[
+      {label:'IHS Geral',data:dados.map(r=>r.ihs||null),borderColor:'#7c3aed',
+       fill:false,tension:.4,pointRadius:4,borderWidth:2.5,spanGaps:false},
+      {label:'IHS ♀',data:dados.map(r=>r.ihsF||null),borderColor:'#d63384',
+       fill:false,tension:.4,pointRadius:3,borderWidth:2,borderDash:[4,2],spanGaps:false},
+      {label:'IHS ♂',data:dados.map(r=>r.ihsM||null),borderColor:'#0ea5e9',
+       fill:false,tension:.4,pointRadius:3,borderWidth:2,borderDash:[2,3],spanGaps:false},
+    ]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:legendOpts,
+      title:{display:true,text:sp,color:'#1e3a5f',font:{size:12,weight:'bold',style:'italic'}}},
+    scales:{
+      x:{grid:gridOpts,ticks:tickOpts},
+      y:{grid:gridOpts,ticks:tickOpts,
+        title:{display:true,text:'IHS (%)',color:'#64748b',font:{size:11}}}
+    }
+  }});
+
+  const tbl=document.getElementById('tbl-ihs-sp');
+  if(tbl){
+    tbl.querySelector('thead').innerHTML=`<tr>${['Mês','Estação','n','n ♀','n ♂','IHS Geral','IHS ♀','IHS ♂'].map(h=>`<th>${h}</th>`).join('')}</tr>`;
+    tbl.querySelector('tbody').innerHTML=dados.map(r=>`<tr>
+      <td style="font-weight:700">${r.m}</td>
+      <td>${MONTH_SEASON_MAP[r.m]||'—'}</td>
+      <td>${r.n}</td><td>${r.nF}</td><td>${r.nM}</td>
+      <td style="font-weight:700;color:#7c3aed">${r.ihs?r.ihs.toFixed(3):'–'}</td>
+      <td style="color:#d63384;font-weight:700">${r.ihsF?r.ihsF.toFixed(3):'–'}</td>
+      <td style="color:#0ea5e9;font-weight:700">${r.ihsM?r.ihsM.toFixed(3):'–'}</td>
+    </tr>`).join('');
+  }
+  D.tIHS_sp_current={sp,dados};
+}
+
+function dlCSVIHS(){
+  if(!D.tIHS_mensal) return;
+  const csv=['Mes,n,IHS_medio',...D.tIHS_mensal.map(r=>`${r.m},${r.n},${r.ihs||''}`)].join('
+');
+  const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:'IHS_mensal.csv'});
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+function dlCSVIHSEsp(){
+  if(!D.tIHS_sp_current) return;
+  const {sp,dados}=D.tIHS_sp_current;
+  const csv=['Mes,n,nF,nM,IHS_Geral,IHS_F,IHS_M',
+    ...dados.map(r=>`${r.m},${r.n},${r.nF},${r.nM},${r.ihs||''},${r.ihsF||''},${r.ihsM||''}`)].join('
+');
+  const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:`IHS_${sp.replace(/ /g,'_')}.csv`});
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+
+/* ════ PESO × COMPRIMENTO DEDICADO ════ */
+function renderPesoComp2(){
+  const selEl=document.getElementById('sel-pc-sp2');
+  const sexoEl=document.getElementById('sel-pc-sexo');
+  if(!selEl||!selEl.options.length) return;
+  const sp=selEl.value; const sexoFil=sexoEl?sexoEl.value:'todos';
+  if(!sp) return;
+
+  let pts=allRecords.filter(r=>r.specie===sp&&r.ct>0&&r.pt>0);
+  if(sexoFil!=='todos') pts=pts.filter(r=>r.sexo===sexoFil);
+  if(pts.length<3){document.getElementById('pc2-stats').textContent='Dados insuficientes (mínimo 3 pontos).';return;}
+
+  const lnX=pts.map(r=>Math.log(r.ct));
+  const lnY=pts.map(r=>Math.log(r.pt));
+  const n=lnX.length;
+  const sx=lnX.reduce((a,b)=>a+b,0),sy=lnY.reduce((a,b)=>a+b,0);
+  const sxx=lnX.reduce((a,v)=>a+v*v,0),sxy=lnX.reduce((a,v,i)=>a+v*lnY[i],0);
+  const b=(n*sxy-sx*sy)/(n*sxx-sx*sx);
+  const lna=(sy-b*sx)/n; const a=Math.exp(lna);
+  const yMean=sy/n;
+  const ssTot=lnY.reduce((acc,v)=>acc+(v-yMean)**2,0);
+  const ssRes=lnY.reduce((acc,v,i)=>acc+(v-(lna+b*lnX[i]))**2,0);
+  const r2=1-ssRes/ssTot;
+
+  const ctMin=Math.min(...pts.map(r=>r.ct));
+  const ctMax=Math.max(...pts.map(r=>r.ct));
+  const regLine=Array.from({length:30},(_,i)=>ctMin+(ctMax-ctMin)*i/29).map(ct=>({x:ct,y:a*Math.pow(ct,b)}));
+
+  mkChart('chart-pc2',{type:'scatter',data:{datasets:[
+    {label:'Dados',data:pts.map(r=>({x:r.ct,y:r.pt})),
+      backgroundColor:pts.map(r=>r.sexo==='F'?'#d6338488':r.sexo==='M'?'#0ea5e988':'#94a3b888'),
+      pointRadius:5,pointHoverRadius:7},
+    {label:`PT=${a.toFixed(5)}×CT^${b.toFixed(4)}`,type:'line',data:regLine,
+      borderColor:'#1e3a5f',backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:0}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts},
+    scales:{
+      x:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'CT (cm)',color:'#64748b',font:{size:11}}},
+      y:{grid:gridOpts,ticks:tickOpts,title:{display:true,text:'PT (g)',color:'#64748b',font:{size:11}}}
+    }
+  }});
+
+  const tipo=b>3.05?'Alométrico positivo (b>3)':b<2.95?'Alométrico negativo (b<3)':'Isométrico (b≈3)';
+  const corTipo=b>3.05?'#2d9e5f':b<2.95?'#e07b39':'#0077b6';
+  document.getElementById('pc2-stats').innerHTML=
+    `<strong style="color:#1e3a5f">${sp}</strong>${sexoFil!=='todos'?' · '+sexoFil:''} · n=${pts.length} · `+
+    `PT = <strong>${a.toFixed(5)}</strong> × CT<sup><strong>${b.toFixed(4)}</strong></sup> · `+
+    `R² = <strong style="color:${r2>.85?'#2d9e5f':r2>.6?'#e07b39':'#e03c3c'}">${r2.toFixed(4)}</strong> · `+
+    `<strong style="color:${corTipo}">${tipo}</strong>`;
+
+  D.tPC2_current=pts;
+}
+function dlCSVPC2(){
+  if(!D.tPC2_current) return;
+  const csv=['specie,item,ct,pt,sexo,monthLabel',
+    ...D.tPC2_current.map(r=>`${r.specie},${r.item},${r.ct},${r.pt},${r.sexo||''},${r.monthLabel||''}`)].join('
+');
+  const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:'peso_comprimento.csv'});
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+
+/* ════ ESTRUTURA POPULACIONAL ════ */
+function renderEstruturaPop(){
+  const selEl=document.getElementById('sel-pop-sp');
+  const varEl=document.getElementById('sel-pop-var');
+  if(!selEl||!selEl.options.length) return;
+  const sp=selEl.value; const varKey=varEl?varEl.value:'ct';
+  if(!sp) return;
+
+  const sub=allRecords.filter(r=>r.specie===sp&&(varKey==='ct'?r.ct>0:r.pt>0));
+  if(sub.length<3){document.getElementById('pop-stats').textContent='Dados insuficientes.';return;}
+
+  const vals=sub.map(r=>varKey==='ct'?r.ct:r.pt);
+  const vMin=Math.min(...vals), vMax=Math.max(...vals);
+  const nBins=Math.min(20, Math.ceil(Math.sqrt(sub.length)));
+  const binW=(vMax-vMin)/nBins;
+
+  const bins=Array.from({length:nBins},(_,i)=>({
+    label:`${(vMin+i*binW).toFixed(1)}`,
+    min:vMin+i*binW, max:vMin+(i+1)*binW,
+    nF:0, nM:0, nI:0
+  }));
+  sub.forEach(r=>{
+    const v=varKey==='ct'?r.ct:r.pt;
+    const bi=Math.min(Math.floor((v-vMin)/binW), nBins-1);
+    if(r.sexo==='F') bins[bi].nF++;
+    else if(r.sexo==='M') bins[bi].nM++;
+    else bins[bi].nI++;
+  });
+
+  mkChart('chart-pop-hist',{type:'bar',data:{
+    labels:bins.map(b=>b.label),
+    datasets:[
+      {label:'♀ Fêmea',data:bins.map(b=>b.nF),backgroundColor:'#d6338488',borderColor:'#d63384',borderWidth:1},
+      {label:'♂ Macho',data:bins.map(b=>b.nM),backgroundColor:'#0ea5e988',borderColor:'#0ea5e9',borderWidth:1},
+      {label:'Indet.',data:bins.map(b=>b.nI),backgroundColor:'#94a3b888',borderColor:'#94a3b8',borderWidth:1},
+    ]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:legendOpts},
+    scales:{
+      x:{stacked:true,grid:gridOpts,ticks:{...tickOpts,maxTicksLimit:10},
+        title:{display:true,text:varKey==='ct'?'CT (cm)':'PT (g)',color:'#64748b',font:{size:11}}},
+      y:{stacked:true,grid:gridOpts,ticks:tickOpts,
+        title:{display:true,text:'Frequência (n)',color:'#64748b',font:{size:11}}}
+    }
+  }});
+
+  // Stats descritivos
+  const vMean=vals.reduce((a,b)=>a+b,0)/vals.length;
+  const vStd=Math.sqrt(vals.map(v=>(v-vMean)**2).reduce((a,b)=>a+b,0)/vals.length);
+  const vSorted=[...vals].sort((a,b)=>a-b);
+  const vMedian=vSorted[Math.floor(vSorted.length/2)];
+  const label=varKey==='ct'?'CT (cm)':'PT (g)';
+  document.getElementById('pop-stats').innerHTML=
+    `<strong style="color:#1e3a5f">${sp}</strong> · n=${sub.length} · `+
+    `<strong>${label}</strong>: média=${vMean.toFixed(1)} · mediana=${vMedian.toFixed(1)} · `+
+    `DP=${vStd.toFixed(1)} · min=${vMin.toFixed(1)} · max=${vMax.toFixed(1)}`;
+
+  // Gráfico por sexo (pizza)
+  const nF=sub.filter(r=>r.sexo==='F').length;
+  const nM=sub.filter(r=>r.sexo==='M').length;
+  const nI=sub.filter(r=>r.sexo!=='F'&&r.sexo!=='M').length;
+  mkChart('chart-pop-sexo',{type:'bar',data:{
+    labels:MN_LABEL,
+    datasets:[
+      {label:'♀',data:MN_LABEL.map(m=>sub.filter(r=>r.monthLabel===m&&r.sexo==='F').length),
+        backgroundColor:'#d6338488',borderColor:'#d63384',borderWidth:1},
+      {label:'♂',data:MN_LABEL.map(m=>sub.filter(r=>r.monthLabel===m&&r.sexo==='M').length),
+        backgroundColor:'#0ea5e988',borderColor:'#0ea5e9',borderWidth:1},
+    ]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts},
+    scales:{
+      x:{stacked:true,grid:gridOpts,ticks:tickOpts},
+      y:{stacked:true,grid:gridOpts,ticks:tickOpts,
+        title:{display:true,text:'n capturas',color:'#64748b',font:{size:11}}}
+    }
+  }});
+  D.tPop_current={sp,vals,bins};
+}
+function dlCSVPop(){
+  if(!D.tPop_current) return;
+  const {sp,bins}=D.tPop_current;
+  const csv=['classe_min,nF,nM,nI,total',
+    ...bins.map(b=>`${b.label},${b.nF},${b.nM},${b.nI},${b.nF+b.nM+b.nI}`)].join('
+');
+  const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:`estrutura_pop_${sp.replace(/ /g,'_')}.csv`});
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
 
 /* Fechar modais clicando fora */
