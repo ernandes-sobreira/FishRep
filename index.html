@@ -508,6 +508,7 @@ footer{text-align:center;padding:14px;font-size:10px;color:#94a3b8;border-top:1p
         <div class="card-hdr">
           <div><div class="card-title">🔬 Frequência de Estágios Gonadais</div><div class="card-sub">REP / ESV / MAT / EMA por mês</div></div>
           <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-green btn-sm" onclick="dlCSVGonadas()">⬇ CSV</button>
             <select id="sel-gonadas-tipo" onchange="renderGonadas()" style="font-size:11px;padding:4px 8px;border-radius:7px;border:1px solid #bfdbfe">
               <option value="ordem">Por Ordem</option><option value="especie">Por Espécie</option>
             </select>
@@ -1251,8 +1252,12 @@ function gerarModelo(){
 function exportarBackup(){
   if(!allRecords.length){alert('Nenhum dado para exportar.');return;}
   const wb=XLSX.utils.book_new();
-  const hdr=["Item","Amostra","Ano","Month","Locality","Coordinate","Ordem","Specie","CT","CP","Peso total (g)","Peso Evis (g)","Sexo","Rep Stage","Peso Gonada","GR","Peso de Fígado","Wc","RGS1","IHS","Level river Aver (m)","X OD (mg/L)","X Temp (°C)","X Cond (µS/cm)","X pH","X Transp (cm)"];
-  const rows=[hdr,...allRecords.sort((a,b)=>+a.item-+b.item).map(r=>[r.item,r.amostra,r.ano,r.month,r.locality,r.coordinate,r.ordem,r.specie,r.ct,r.cp,r.pt,r.pe,r.sexo,r.stage,r.pg,r.gr,r.pf,r.wc,r.rgs,r.ihs,r.wt,r.od,r.temp,r.cond,r.ph,r.sec])];
+  const hdr=["Item","ID","Ano","Month","Locality","Coordinate","Ordem","Specie","CT","CP","Peso total (g)","Peso Evis (g)","Sexo","Rep Stage","Peso Gonada","GR","Peso de Fígado","Wc","IGS","IHS","Level river Aver (m)","X OD (mg/L)","X Temp (°C)","X Cond (µS/cm)","X pH","X Transp (cm)"];
+  const rows=[hdr,...allRecords.sort((a,b)=>{
+    const na=parseInt((a.amostra||a.item||'0').toString().replace(/[^0-9]/g,''));
+    const nb=parseInt((b.amostra||b.item||'0').toString().replace(/[^0-9]/g,''));
+    return na-nb;
+  }).map(r=>[r.item,r.amostra||r.item,r.ano,r.month,r.locality,r.coordinate,r.ordem,r.specie,r.ct,r.cp,r.pt,r.pe,r.sexo,r.stage,r.pg,r.gr,r.pf,r.wc,r.rgs,r.ihs,r.wt,r.od,r.temp,r.cond,r.ph,r.sec])];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),"Dados_Geral");
   XLSX.writeFile(wb,`FishRep_backup_${new Date().toISOString().slice(0,10)}.xlsx`);
   registrarAtividade('backup',`Backup exportado: ${allRecords.length} registros`);
@@ -1605,16 +1610,50 @@ function renderIGSEspecie(){
 
 /* ════ Downloads CSV ════ */
 function dlCSV(key,fname){
-  const data=D[key];if(!data?.length)return;
+  // Garantir que D está populado
+  if(!D.t1&&allRecords.length>0) D=buildDataFromRecords(allRecords);
+  const data=D[key];
+  if(!data||!data.length){alert('Sem dados para exportar. Abra a aba primeiro.');return;}
   const keys=Object.keys(data[0]);
   const csv=[keys.join(','),...data.map(r=>keys.map(k=>JSON.stringify(r[k]??'')).join(','))].join('\n');
   const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:fname+'.csv'});
   document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
-function dlCSVSexo(){dlCSV('t3bySpecies_'+document.getElementById('sel-sexo').value,'sexo_rgs');}
-function dlCSVGonadas(){dlCSV('t4ByOrdem_'+document.getElementById('sel-gonadas-valor').value,'estagios');}
-function dlCSVPC(){const d=D.tPC_current;if(!d?.length)return;const keys=Object.keys(d[0]);const csv=[keys.join(','),...d.map(r=>keys.map(k=>JSON.stringify(r[k]??'')).join(','))].join('\n');const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:'peso_comprimento.csv'});document.body.appendChild(a);a.click();document.body.removeChild(a);}
-function dlCSVIGSEsp(){const d=D.tIGSSp_current;if(!d?.length)return;const keys=Object.keys(d[0]);const csv=[keys.join(','),...d.map(r=>keys.map(k=>JSON.stringify(r[k]??'')).join(','))].join('\n');const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:'igs_'+d[0].specie.replace(/ /g,'_')+'.csv'});document.body.appendChild(a);a.click();document.body.removeChild(a);}
+function dlCSVSexo(){
+  const sp=document.getElementById('sel-sexo').value; if(!sp) return;
+  if(!D.t3bySpecies) D=buildDataFromRecords(allRecords);
+  const data=D.t3bySpecies?.[sp]||[];
+  if(!data.length){alert('Sem dados.');return;}
+  const csv=['Mes,fRGS,mRGS,nF,nM',...data.map(r=>`${r.m},${r.fRGS||''},${r.mRGS||''},${r.nF},${r.nM}`)].join('\n');
+  const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:`IGS_sexo_${sp.replace(/ /g,'_')}.csv`});
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+function dlCSVGonadas(){
+  const tipo=document.getElementById('sel-gonadas-tipo').value;
+  const val=document.getElementById('sel-gonadas-valor').value;
+  if(!D.t4ByOrdem) D=buildDataFromRecords(allRecords);
+  const data=tipo==='ordem'?(D.t4ByOrdem?.[val]||[]):(D.t4BySpecies?.[val]||[]);
+  if(!data.length){alert('Sem dados.');return;}
+  const csv=['Mes,n,REP,ESV,MAT,EMA',...data.map(r=>`${r.m},${r.n},${r.REP},${r.ESV},${r.MAT},${r.EMA}`)].join('\n');
+  const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:`Estagios_${val.replace(/ /g,'_')}.csv`});
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+function dlCSVPC(){
+  if(!D.tPC_current?.length){alert('Abra a aba Índices primeiro.');return;}
+  const d=D.tPC_current;
+  const keys=Object.keys(d[0]);
+  const csv=[keys.join(','),...d.map(r=>keys.map(k=>JSON.stringify(r[k]??'')).join(','))].join('\n');
+  const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:'peso_comprimento.csv'});
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+function dlCSVIGSEsp(){
+  if(!D.tIGSSp_current?.length){alert('Selecione uma espécie na aba IGS × Espécie primeiro.');return;}
+  const d=D.tIGSSp_current;
+  const keys=Object.keys(d[0]);
+  const csv=[keys.join(','),...d.map(r=>keys.map(k=>JSON.stringify(r[k]??'')).join(','))].join('\n');
+  const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:'igs_'+d[0].specie.replace(/ /g,'_')+'.csv'});
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
 function dlChartSVG(){}
 
 /* ════ Expor no window ════ */
