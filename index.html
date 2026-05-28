@@ -1905,8 +1905,7 @@ function renderIHSEspecie(){
 
 function dlCSVIHS(){
   if(!D.tIHS_mensal) return;
-  const csv=['Mes,n,IHS_medio',...D.tIHS_mensal.map(r=>`${r.m},${r.n},${r.ihs||''}`)].join('
-');
+  const csv=['Mes,n,IHS_medio',...D.tIHS_mensal.map(r=>`${r.m},${r.n},${r.ihs||''}`)].join('\n');
   const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:'IHS_mensal.csv'});
   document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
@@ -1914,8 +1913,7 @@ function dlCSVIHSEsp(){
   if(!D.tIHS_sp_current) return;
   const {sp,dados}=D.tIHS_sp_current;
   const csv=['Mes,n,nF,nM,IHS_Geral,IHS_F,IHS_M',
-    ...dados.map(r=>`${r.m},${r.n},${r.nF},${r.nM},${r.ihs||''},${r.ihsF||''},${r.ihsM||''}`)].join('
-');
+    ...dados.map(r=>`${r.m},${r.n},${r.nF},${r.nM},${r.ihs||''},${r.ihsF||''},${r.ihsM||''}`)].join('\n');
   const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:`IHS_${sp.replace(/ /g,'_')}.csv`});
   document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
@@ -1974,8 +1972,7 @@ function renderPesoComp2(){
 function dlCSVPC2(){
   if(!D.tPC2_current) return;
   const csv=['specie,item,ct,pt,sexo,monthLabel',
-    ...D.tPC2_current.map(r=>`${r.specie},${r.item},${r.ct},${r.pt},${r.sexo||''},${r.monthLabel||''}`)].join('
-');
+    ...D.tPC2_current.map(r=>`${r.specie},${r.item},${r.ct},${r.pt},${r.sexo||''},${r.monthLabel||''}`)].join('\n');
   const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:'peso_comprimento.csv'});
   document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
@@ -2062,8 +2059,7 @@ function dlCSVPop(){
   if(!D.tPop_current) return;
   const {sp,bins}=D.tPop_current;
   const csv=['classe_min,nF,nM,nI,total',
-    ...bins.map(b=>`${b.label},${b.nF},${b.nM},${b.nI},${b.nF+b.nM+b.nI}`)].join('
-');
+    ...bins.map(b=>`${b.label},${b.nF},${b.nM},${b.nI},${b.nF+b.nM+b.nI}`)].join('\n');
   const a=Object.assign(document.createElement('a'),{href:'data:text/csv;charset=utf-8,'+encodeURIComponent(csv),download:`estrutura_pop_${sp.replace(/ /g,'_')}.csv`});
   document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
