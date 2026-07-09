@@ -40,10 +40,15 @@ header{background:linear-gradient(135deg,#1e3a5f 0%,#0077b6 60%,#00b4d8 100%);pa
 
 /* ── TABS DE ANÁLISE ── */
 #tabs-bar{background:#fff;border-bottom:2px solid #e2e8f0;position:sticky;top:0;z-index:90}
-.tabs-inner{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:0;padding:0;scrollbar-width:none}
-.tabs-inner::-webkit-scrollbar{display:none}
+.tabs-wrapper{position:relative;display:flex;align-items:center}
+.tabs-inner{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:0;padding:0;scrollbar-width:thin;scrollbar-color:#bfdbfe #f1f5f9;flex:1}
+.tabs-inner::-webkit-scrollbar{height:4px}
+.tabs-inner::-webkit-scrollbar-track{background:#f1f5f9}
+.tabs-inner::-webkit-scrollbar-thumb{background:#bfdbfe;border-radius:4px}
 .tab-btn{background:none;border:none;border-bottom:3px solid transparent;cursor:pointer;padding:10px 12px;font-size:11px;font-weight:700;color:#64748b;white-space:nowrap;font-family:inherit;flex-shrink:0}
 .tab-btn.active{color:#0077b6;border-bottom-color:#0077b6}
+.tab-scroll-btn{background:#fff;border:none;cursor:pointer;padding:0 8px;font-size:18px;color:#0077b6;flex-shrink:0;height:100%;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;z-index:2}
+.tab-scroll-btn:hover{background:#f0f9ff}
 .tab-reset{margin-left:auto;background:none;border:none;cursor:pointer;padding:10px 10px;font-size:11px;color:#94a3b8;font-weight:600;white-space:nowrap;flex-shrink:0}
 
 /* ── WELCOME ── */
@@ -195,21 +200,25 @@ footer{text-align:center;padding:14px;font-size:10px;color:#94a3b8;border-top:1p
 
 <!-- ===== TABS ===== -->
 <div id="tabs-bar" style="display:none">
-  <div class="tabs-inner">
-    <button class="tab-btn active" onclick="showTab(0)">🏠 Visão Geral</button>
-    <button class="tab-btn" onclick="showTab(1)">📈 IGS Mensal</button>
-    <button class="tab-btn" onclick="showTab(2)">🐟 Por Espécie</button>
-    <button class="tab-btn" onclick="showTab(3)">⚥ Sexo</button>
-    <button class="tab-btn" onclick="showTab(4)">🔬 Estágios</button>
-    <button class="tab-btn" onclick="showTab(5)">🌊 Ambiental</button>
-    <button class="tab-btn" onclick="showTab(6)">📊 Estatística</button>
-    <button class="tab-btn" onclick="showTab(7)">🏆 Recordes</button>
-    <button class="tab-btn" onclick="showTab(8)">📐 Índices</button>
-    <button class="tab-btn" onclick="showTab(9)">🔗 IGS × Espécie</button>
-    <button class="tab-btn" onclick="showTab(10)">🫀 IHS</button>
-    <button class="tab-btn" onclick="showTab(11)">📏 Peso × Comprimento</button>
-    <button class="tab-btn" onclick="showTab(12)">📊 Estrutura Pop.</button>
-    <button class="tab-reset" onclick="resetApp()">🏠 Início</button>
+  <div class="tabs-wrapper">
+    <button class="tab-scroll-btn" onclick="document.querySelector('.tabs-inner').scrollBy({left:-200,behavior:'smooth'})">‹</button>
+    <div class="tabs-inner" id="tabs-inner">
+      <button class="tab-btn active" onclick="showTab(0)">🏠 Visão Geral</button>
+      <button class="tab-btn" onclick="showTab(1)">📈 IGS Mensal</button>
+      <button class="tab-btn" onclick="showTab(2)">🐟 Por Espécie</button>
+      <button class="tab-btn" onclick="showTab(3)">⚥ Sexo</button>
+      <button class="tab-btn" onclick="showTab(4)">🔬 Estágios</button>
+      <button class="tab-btn" onclick="showTab(5)">🌊 Ambiental</button>
+      <button class="tab-btn" onclick="showTab(6)">📊 Estatística</button>
+      <button class="tab-btn" onclick="showTab(7)">🏆 Recordes</button>
+      <button class="tab-btn" onclick="showTab(8)">📐 Índices</button>
+      <button class="tab-btn" onclick="showTab(9)">🔗 IGS × Espécie</button>
+      <button class="tab-btn" onclick="showTab(10)">🫀 IHS</button>
+      <button class="tab-btn" onclick="showTab(11)">📏 Peso × Comprimento</button>
+      <button class="tab-btn" onclick="showTab(12)">📊 Estrutura Pop.</button>
+      <button class="tab-reset" onclick="resetApp()">🏠 Início</button>
+    </div>
+    <button class="tab-scroll-btn" onclick="document.querySelector('.tabs-inner').scrollBy({left:200,behavior:'smooth'})">›</button>
   </div>
 </div>
 
